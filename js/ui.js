@@ -233,6 +233,6 @@ class UI {
 }
 
 let ui;
-document.addEventListener('DOMContentLoaded', () => {
+window.initUI = () => {
     ui = new UI(game);
-});
+};

@@ -1,95 +1,125 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <title>几何决斗</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo+Black&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-    <canvas id="game-canvas"></canvas>
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <title>几何决斗</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo+Black&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="css/style.css" />
+    </head>
+    <body>
+        <canvas id="game-canvas"></canvas>
 
-    <div id="start-screen" class="overlay">
-        <div class="start-content">
-            <div class="title-wrap">
-                <div class="title-geo"></div>
-                <h1 class="game-title">GEOMETRY<br>DUEL</h1>
-                <p class="game-subtitle">几何决斗</p>
+        <div id="start-screen" class="overlay">
+            <div class="start-content">
+                <div class="title-wrap">
+                    <div class="title-geo"></div>
+                    <h1 class="game-title">GEOMETRY<br />DUEL</h1>
+                    <p class="game-subtitle">几何决斗</p>
+                </div>
+                <div class="mode-selector">
+                    <button class="mode-btn" data-mode="ai">
+                        <span class="mode-icon">◈</span>
+                        <span class="mode-label">人机对战</span>
+                        <span class="mode-desc">1v2 大乱斗</span>
+                    </button>
+                    <button class="mode-btn" data-mode="online">
+                        <span class="mode-icon">◇</span>
+                        <span class="mode-label">联机对战</span>
+                        <span class="mode-desc">2-4 人 P2P</span>
+                    </button>
+                </div>
+                <p class="hint-text">WASD 移动 · Z 普攻 · X 大招 · P 暂停</p>
             </div>
-            <div class="mode-selector">
-                <button class="mode-btn" data-mode="ai">
-                    <span class="mode-icon">◈</span>
-                    <span class="mode-label">人机对战</span>
-                    <span class="mode-desc">1v2 大乱斗</span>
-                </button>
-                <button class="mode-btn" data-mode="online">
-                    <span class="mode-icon">◇</span>
-                    <span class="mode-label">联机对战</span>
-                    <span class="mode-desc">2-4 人 P2P</span>
-                </button>
-            </div>
-            <p class="hint-text">WASD 移动 · Z 普攻 · X 大招 · P 暂停</p>
         </div>
-    </div>
 
-    <div id="room-screen" class="overlay hidden">
-        <div class="room-panel">
-            <button class="back-btn" id="back-to-start">←</button>
-            <h2 class="room-title">联机对战</h2>
-            <div class="room-tabs">
-                <button class="tab-btn active" data-tab="create">创建房间</button>
-                <button class="tab-btn" data-tab="join">加入房间</button>
-            </div>
-            <div class="tab-content" id="tab-create">
-                <div class="player-count">
-                    <label>玩家人数</label>
-                    <div class="count-selector">
-                        <button class="count-btn" data-count="2">2</button>
-                        <button class="count-btn active" data-count="3">3</button>
-                        <button class="count-btn" data-count="4">4</button>
+        <div id="room-screen" class="overlay hidden">
+            <div class="room-panel">
+                <button class="back-btn" id="back-to-start">←</button>
+                <h2 class="room-title">联机对战</h2>
+                <div class="room-tabs">
+                    <button class="tab-btn active" data-tab="create">
+                        创建房间
+                    </button>
+                    <button class="tab-btn" data-tab="join">加入房间</button>
+                </div>
+                <div class="tab-content" id="tab-create">
+                    <div class="player-count">
+                        <label>玩家人数</label>
+                        <div class="count-selector">
+                            <button class="count-btn" data-count="2">2</button>
+                            <button class="count-btn active" data-count="3">
+                                3
+                            </button>
+                            <button class="count-btn" data-count="4">4</button>
+                        </div>
                     </div>
+                    <button class="primary-btn" id="create-room-btn">
+                        创建房间
+                    </button>
                 </div>
-                <button class="primary-btn" id="create-room-btn">创建房间</button>
-            </div>
-            <div class="tab-content hidden" id="tab-join">
-                <div class="room-code-input">
-                    <label>房间号</label>
-                    <input type="text" id="room-code-input" maxlength="6" placeholder="输入6位房间号" autocomplete="off">
+                <div class="tab-content hidden" id="tab-join">
+                    <div class="room-code-input">
+                        <label>房间号</label>
+                        <input
+                            type="text"
+                            id="room-code-input"
+                            maxlength="6"
+                            placeholder="输入6位房间号"
+                            autocomplete="off"
+                        />
+                    </div>
+                    <button class="primary-btn" id="join-room-btn">
+                        加入房间
+                    </button>
                 </div>
-                <button class="primary-btn" id="join-room-btn">加入房间</button>
-            </div>
-            <div class="room-status" id="room-status"></div>
-        </div>
-    </div>
-
-    <div id="lobby-screen" class="overlay hidden">
-        <div class="lobby-panel">
-            <div class="lobby-header">
-                <div class="lobby-room-code">
-                    <span class="code-label">房间号</span>
-                    <span class="code-value" id="lobby-room-code">------</span>
-                    <button class="copy-btn" id="copy-room-code">复制</button>
-                </div>
-                <button class="back-btn" id="leave-room-btn">离开</button>
-            </div>
-            <div class="player-list" id="player-list">
-            </div>
-            <div class="lobby-footer">
-                <div class="player-count-text">等待玩家加入... <span id="ready-count">1</span>/<span id="max-count">3</span></div>
-                <button class="primary-btn disabled" id="start-game-btn">等待更多玩家</button>
+                <div class="room-status" id="room-status"></div>
             </div>
         </div>
-    </div>
 
-    <script src="js/howler.js"></script>
-    <script src="js/config.js"></script>
-    <script src="js/network.js"></script>
-    <script src="js/game.js"></script>
-    <script src="js/ui.js"></script>
-</body>
+        <div id="lobby-screen" class="overlay hidden">
+            <div class="lobby-panel">
+                <div class="lobby-header">
+                    <div class="lobby-room-code">
+                        <span class="code-label">房间号</span>
+                        <span class="code-value" id="lobby-room-code"
+                            >------</span
+                        >
+                        <button class="copy-btn" id="copy-room-code">
+                            复制
+                        </button>
+                    </div>
+                    <button class="back-btn" id="leave-room-btn">离开</button>
+                </div>
+                <div class="player-list" id="player-list"></div>
+                <div class="lobby-footer">
+                    <div class="player-count-text">
+                        等待玩家加入... <span id="ready-count">1</span>/<span
+                            id="max-count"
+                            >3</span
+                        >
+                    </div>
+                    <button class="primary-btn disabled" id="start-game-btn">
+                        等待更多玩家
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script src="js/howler.js" defer></script>
+        <script src="js/config.js" defer></script>
+        <script src="js/network.js" defer></script>
+        <script src="js/ui.js" defer></script>
+        <script src="js/game.js" defer></script>
+    </body>
 </html>
