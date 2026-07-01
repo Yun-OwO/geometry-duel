@@ -11,6 +11,7 @@ class Game {
         this.deathKillerOwner = null;
         this.gameMode = 'ai';
         this.onlinePlayerCount = 2;
+        this.aiPlayerCount = 3;
         this.rng = null;
 
         this.setupCanvas();
@@ -73,6 +74,13 @@ class Game {
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
             if (e.code === 'KeyP' && !e.repeat) this.togglePause();
+            if (e.code === 'Escape' && !e.repeat) {
+                if (this.state === GameState.PAUSED) {
+                    this.returnToMenu();
+                } else if (this.state === GameState.PLAYING) {
+                    this.togglePause();
+                }
+            }
             if (e.code === 'KeyZ' && this.state === GameState.MENU) this.startGame();
             if (e.code === 'KeyR' && this.state === GameState.GAME_OVER) this.startGame();
         });
@@ -151,12 +159,22 @@ class Game {
             }
 
             if (this.state === GameState.PAUSED) {
-                const btnW = this.screenW * 0.4;
-                const btnH = this.screenH * 0.08;
-                const btnY = this.screenH / 2 + 30;
-                if (x >= this.screenW / 2 - btnW / 2 && x <= this.screenW / 2 + btnW / 2 &&
-                    y >= btnY - btnH / 2 && y <= btnY + btnH / 2) {
+                const btnW = 240;
+                const btnH = 52;
+                const btnSpacing = 16;
+                const startY = this.screenH / 2 - 10;
+                const menuBtnY = startY + btnH + btnSpacing;
+
+                const scale = Math.min(this.screenW, this.screenH) / CONFIG.LOGICAL_SIZE;
+                const scaledBtnW = btnW * scale;
+                const scaledBtnH = btnH * scale;
+
+                if (x >= this.screenW / 2 - scaledBtnW / 2 && x <= this.screenW / 2 + scaledBtnW / 2 &&
+                    y >= startY - scaledBtnH / 2 && y <= startY + scaledBtnH / 2) {
                     this.togglePause();
+                } else if (x >= this.screenW / 2 - scaledBtnW / 2 && x <= this.screenW / 2 + scaledBtnW / 2 &&
+                    y >= menuBtnY - scaledBtnH / 2 && y <= menuBtnY + scaledBtnH / 2) {
+                    this.returnToMenu();
                 }
                 continue;
             }
@@ -370,7 +388,7 @@ class Game {
                 return;
             }
         } else {
-            this.initEntities();
+            this.initEntities(this.aiPlayerCount);
         }
 
         this.resetGame();
@@ -399,6 +417,14 @@ class Game {
             this.state = GameState.PAUSED;
         } else if (this.state === GameState.PAUSED) {
             this.state = GameState.PLAYING;
+        }
+    }
+
+    returnToMenu() {
+        this.state = GameState.MENU;
+        this.demoMode = true;
+        if (typeof ui !== 'undefined' && ui.showStartScreen) {
+            ui.showStartScreen();
         }
     }
 
@@ -851,17 +877,33 @@ class Game {
 
     drawUI(ctx) {
         if (this.state === GameState.PAUSED) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
             const size = CONFIG.LOGICAL_SIZE;
             ctx.fillRect(-size / 2, -size / 2, size, size);
 
             ctx.fillStyle = '#000';
-            ctx.font = '32px monospace';
+            ctx.font = 'bold 36px monospace';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('暂停中', 0, -20);
-            ctx.font = '20px monospace';
-            ctx.fillText('按 P 继续', 0, 20);
+            ctx.fillText('暂停中', 0, -80);
+
+            const btnW = 240;
+            const btnH = 52;
+            const btnSpacing = 16;
+            const startY = -10;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(-btnW / 2, startY - btnH / 2, btnW, btnH);
+            ctx.fillStyle = '#000';
+            ctx.font = '18px monospace';
+            ctx.fillText('继续游戏 (P)', 0, startY);
+
+            const menuBtnY = startY + btnH + btnSpacing;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(-btnW / 2, menuBtnY - btnH / 2, btnW, btnH);
+            ctx.fillStyle = '#000';
+            ctx.font = '18px monospace';
+            ctx.fillText('返回主页面', 0, menuBtnY);
         }
 
         let overlayAlpha = 0;

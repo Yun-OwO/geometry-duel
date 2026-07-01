@@ -2,6 +2,7 @@ class UI {
     constructor(game) {
         this.game = game;
         this.selectedPlayerCount = 3;
+        this.selectedAICount = 3;
         this.currentTab = 'create';
         this.initElements();
         this.initEvents();
@@ -10,6 +11,7 @@ class UI {
 
     initElements() {
         this.startScreen = document.getElementById('start-screen');
+        this.aiModeScreen = document.getElementById('ai-mode-screen');
         this.roomScreen = document.getElementById('room-screen');
         this.lobbyScreen = document.getElementById('lobby-screen');
         this.roomStatus = document.getElementById('room-status');
@@ -25,15 +27,29 @@ class UI {
             btn.addEventListener('click', () => {
                 const mode = btn.dataset.mode;
                 if (mode === 'ai') {
-                    this.startAIGame();
+                    this.showAIModeScreen();
                 } else if (mode === 'online') {
                     this.showRoomScreen();
                 }
             });
         });
 
+        document.getElementById('back-to-start-from-ai').addEventListener('click', () => {
+            this.showStartScreen();
+        });
+
         document.getElementById('back-to-start').addEventListener('click', () => {
             this.showStartScreen();
+        });
+
+        document.querySelectorAll('.ai-count-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.setAICount(parseInt(btn.dataset.count));
+            });
+        });
+
+        document.getElementById('start-ai-btn').addEventListener('click', () => {
+            this.startAIGame();
         });
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -88,14 +104,23 @@ class UI {
 
     showStartScreen() {
         this.startScreen.classList.remove('hidden');
+        this.aiModeScreen.classList.add('hidden');
         this.roomScreen.classList.add('hidden');
         this.lobbyScreen.classList.add('hidden');
         this.game.demoMode = true;
         this.game.state = GameState.MENU;
     }
 
+    showAIModeScreen() {
+        this.startScreen.classList.add('hidden');
+        this.aiModeScreen.classList.remove('hidden');
+        this.roomScreen.classList.add('hidden');
+        this.lobbyScreen.classList.add('hidden');
+    }
+
     showRoomScreen() {
         this.startScreen.classList.add('hidden');
+        this.aiModeScreen.classList.add('hidden');
         this.roomScreen.classList.remove('hidden');
         this.lobbyScreen.classList.add('hidden');
         this.roomStatus.textContent = '';
@@ -104,13 +129,22 @@ class UI {
 
     showLobbyScreen() {
         this.startScreen.classList.add('hidden');
+        this.aiModeScreen.classList.add('hidden');
         this.roomScreen.classList.add('hidden');
         this.lobbyScreen.classList.remove('hidden');
     }
 
+    setAICount(count) {
+        this.selectedAICount = count;
+        document.querySelectorAll('.ai-count-btn').forEach(btn => {
+            btn.classList.toggle('active', parseInt(btn.dataset.count) === count);
+        });
+    }
+
     startAIGame() {
-        this.startScreen.classList.add('hidden');
+        this.aiModeScreen.classList.add('hidden');
         this.game.gameMode = 'ai';
+        this.game.aiPlayerCount = this.selectedAICount;
         this.game.startGame();
     }
 
