@@ -161,15 +161,12 @@ class Game {
             const id = t.identifier;
 
             if (this.state === GameState.GAME_OVER) {
-                const btnW = 280;
-                const btnH = 56;
-                const btnY = 50;
-                const scale = Math.min(this.screenW, this.screenH) / CONFIG.LOGICAL_SIZE;
-                const scaledBtnW = btnW * scale;
-                const scaledBtnH = btnH * scale;
-                const scaledBtnY = this.screenH / 2 + btnY * scale;
-                if (x >= this.screenW / 2 - scaledBtnW / 2 && x <= this.screenW / 2 + scaledBtnW / 2 &&
-                    y >= scaledBtnY - scaledBtnH / 2 && y <= scaledBtnY + scaledBtnH / 2) {
+                const minDim = Math.min(this.screenW, this.screenH);
+                const btnW = minDim * 0.5;
+                const btnH = minDim * 0.09;
+                const btnY = this.screenH / 2 + minDim * 0.05;
+                if (x >= this.screenW / 2 - btnW / 2 && x <= this.screenW / 2 + btnW / 2 &&
+                    y >= btnY - btnH / 2 && y <= btnY + btnH / 2) {
                     this.startGame();
                     this.playSound('lCharge');
                     this.vibrate(20);
@@ -178,23 +175,20 @@ class Game {
             }
 
             if (this.state === GameState.PAUSED) {
-                const btnW = 240;
-                const btnH = 52;
-                const btnSpacing = 16;
-                const startY = this.screenH / 2 - 10;
-                const menuBtnY = startY + btnH + btnSpacing;
+                const minDim = Math.min(this.screenW, this.screenH);
+                const btnW = minDim * 0.45;
+                const btnH = minDim * 0.09;
+                const btnSpacing = minDim * 0.025;
+                const startBtnY = this.screenH / 2 + minDim * 0.02;
+                const menuBtnY = startBtnY + btnH + btnSpacing;
 
-                const scale = Math.min(this.screenW, this.screenH) / CONFIG.LOGICAL_SIZE;
-                const scaledBtnW = btnW * scale;
-                const scaledBtnH = btnH * scale;
-
-                if (x >= this.screenW / 2 - scaledBtnW / 2 && x <= this.screenW / 2 + scaledBtnW / 2 &&
-                    y >= startY - scaledBtnH / 2 && y <= startY + scaledBtnH / 2) {
+                if (x >= this.screenW / 2 - btnW / 2 && x <= this.screenW / 2 + btnW / 2 &&
+                    y >= startBtnY - btnH / 2 && y <= startBtnY + btnH / 2) {
                     this.togglePause();
                     this.playSound('lCharge');
                     this.vibrate(15);
-                } else if (x >= this.screenW / 2 - scaledBtnW / 2 && x <= this.screenW / 2 + scaledBtnW / 2 &&
-                    y >= menuBtnY - scaledBtnH / 2 && y <= menuBtnY + scaledBtnH / 2) {
+                } else if (x >= this.screenW / 2 - btnW / 2 && x <= this.screenW / 2 + btnW / 2 &&
+                    y >= menuBtnY - btnH / 2 && y <= menuBtnY + btnH / 2) {
                     this.returnToMenu();
                     this.playSound('lCharge');
                     this.vibrate(20);
@@ -915,113 +909,10 @@ class Game {
     }
 
     drawUI(ctx) {
-        if (this.state === GameState.PAUSED) {
-            ctx.fillStyle = '#000';
-            ctx.font = 'bold 36px monospace';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('暂停中', 0, -80);
-
-            const btnW = 240;
-            const btnH = 52;
-            const btnSpacing = 16;
-            const startY = -10;
-
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-            ctx.fillRect(-btnW / 2, startY - btnH / 2, btnW, btnH);
-            ctx.fillStyle = '#000';
-            ctx.font = '18px monospace';
-            ctx.fillText('继续游戏 (P)', 0, startY);
-
-            const menuBtnY = startY + btnH + btnSpacing;
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-            ctx.fillRect(-btnW / 2, menuBtnY - btnH / 2, btnW, btnH);
-            ctx.fillStyle = '#000';
-            ctx.font = '18px monospace';
-            ctx.fillText('返回主页面', 0, menuBtnY);
-        }
-
-        let overlayAlpha = 0;
-        let overlayToWhite = 0;
-
-        if (this.deathAnimationPending) {
-            const fadeProgress = Math.min(this.deathAnimationTime / CONFIG.DEATH_ANIMATION_DURATION, 1);
-            const easeFade = fadeProgress * fadeProgress * (3 - 2 * fadeProgress);
-            overlayAlpha = 0.2 + easeFade * 0.6;
-        }
-
-        if (this.state === GameState.GAME_OVER) {
-            const t = this.gameOverTransition || 0;
-            const easeT = t * t * (3 - 2 * t);
-
-            if (t < 0.4) {
-                overlayAlpha = 0.8 + (t / 0.4) * 0.2;
-                overlayToWhite = 0;
-            } else {
-                overlayAlpha = 1;
-                overlayToWhite = (t - 0.4) / 0.6;
-                overlayToWhite = overlayToWhite * overlayToWhite * (3 - 2 * overlayToWhite);
-            }
-        }
-
-        if (overlayAlpha > 0) {
-            const size = CONFIG.LOGICAL_SIZE;
-            if (overlayToWhite > 0) {
-                const bgR = Math.floor(0 + 255 * overlayToWhite);
-                const bgG = Math.floor(0 + 255 * overlayToWhite);
-                const bgB = Math.floor(0 + 255 * overlayToWhite);
-                ctx.fillStyle = 'rgb(' + bgR + ', ' + bgG + ', ' + bgB + ')';
-            } else {
-                ctx.fillStyle = 'rgba(0, 0, 0, ' + overlayAlpha + ')';
-            }
-            ctx.fillRect(-size / 2, -size / 2, size, size);
-        }
-
-        if (this.state === GameState.GAME_OVER) {
-            const textAlpha = this.gameOverTextIn || 0;
-            if (textAlpha > 0) {
-                const easeText = textAlpha * textAlpha * (3 - 2 * textAlpha);
-                const titleY = (1 - easeText) * 60;
-                const btnYOffset = (1 - easeText) * 30;
-                const titleScale = 0.8 + easeText * 0.2;
-                const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-                ctx.save();
-                ctx.globalAlpha = easeText;
-
-                ctx.save();
-                ctx.translate(0, -25 + titleY);
-                ctx.scale(titleScale, titleScale);
-                ctx.fillStyle = '#000';
-                ctx.font = 'bold 52px monospace';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(this.winnerId === 0 ? '胜 利' : '失 败', 0, 0);
-                ctx.restore();
-
-                const btnW = 280;
-                const btnH = 56;
-                const btnY = 50 + btnYOffset;
-
-                ctx.globalAlpha = easeText * 0.15;
-                ctx.fillStyle = '#000';
-                ctx.fillRect(-btnW / 2, btnY - btnH / 2, btnW, btnH);
-
-                ctx.globalAlpha = easeText;
-                ctx.font = '20px monospace';
-                ctx.fillStyle = '#000';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(isTouch ? '点击重新开始' : '按 R 重新开始', 0, btnY);
-
-                ctx.restore();
-            }
-        }
     }
 
     drawScreenUI(ctx) {
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        if (!isTouch) return;
 
         ctx.save();
 
@@ -1029,7 +920,7 @@ class Game {
         const h = this.screenH * this.dpr;
         const dpr = this.dpr;
 
-        if (this.state === GameState.PLAYING || this.state === GameState.PAUSED) {
+        if (isTouch && (this.state === GameState.PLAYING || this.state === GameState.PAUSED)) {
             const joyCenter = this.getJoystickCenter();
             const joyR = this.getJoystickRadius() * dpr;
             const joyCX = joyCenter.x * dpr;
@@ -1100,6 +991,36 @@ class Game {
             ctx.fillStyle = '#fff';
             ctx.fillRect(0, 0, w, h);
             ctx.globalAlpha = 1;
+
+            const minDim = Math.min(w, h);
+            const titleSize = minDim * 0.07;
+            const btnW = minDim * 0.45;
+            const btnH = minDim * 0.09;
+            const btnSpacing = minDim * 0.025;
+            const titleY = h / 2 - minDim * 0.12;
+            const startBtnY = h / 2 + minDim * 0.02;
+            const menuBtnY = startBtnY + btnH + btnSpacing;
+
+            ctx.fillStyle = '#000';
+            ctx.font = `bold ${titleSize}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('暂停中', w / 2, titleY);
+
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(w / 2 - btnW / 2, startBtnY - btnH / 2, btnW, btnH);
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#000';
+            ctx.font = `${btnH * 0.4}px monospace`;
+            ctx.fillText('继续游戏 (P)', w / 2, startBtnY);
+
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(w / 2 - btnW / 2, menuBtnY - btnH / 2, btnW, btnH);
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#000';
+            ctx.fillText('返回主页面', w / 2, menuBtnY);
         }
 
         if (this.deathAnimationPending || this.state === GameState.GAME_OVER) {
@@ -1136,6 +1057,45 @@ class Game {
                     ctx.fillStyle = '#000';
                 }
                 ctx.fillRect(0, 0, w, h);
+            }
+
+            if (this.state === GameState.GAME_OVER) {
+                const textAlpha = this.gameOverTextIn || 0;
+                if (textAlpha > 0) {
+                    const easeText = textAlpha * textAlpha * (3 - 2 * textAlpha);
+                    const minDim = Math.min(w, h);
+                    const titleSize = minDim * 0.09;
+                    const btnW = minDim * 0.5;
+                    const btnH = minDim * 0.09;
+                    const titleYOffset = (1 - easeText) * minDim * 0.1;
+                    const btnYOffset = (1 - easeText) * minDim * 0.06;
+                    const titleScale = 0.7 + easeText * 0.3;
+                    const titleY = h / 2 - minDim * 0.08 + titleYOffset;
+                    const btnY = h / 2 + minDim * 0.05 + btnYOffset;
+
+                    ctx.globalAlpha = easeText;
+
+                    ctx.save();
+                    ctx.translate(w / 2, titleY);
+                    ctx.scale(titleScale, titleScale);
+                    ctx.fillStyle = '#000';
+                    ctx.font = `bold ${titleSize}px monospace`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.winnerId === 0 ? '胜 利' : '失 败', 0, 0);
+                    ctx.restore();
+
+                    ctx.globalAlpha = easeText * 0.15;
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(w / 2 - btnW / 2, btnY - btnH / 2, btnW, btnH);
+
+                    ctx.globalAlpha = easeText;
+                    ctx.font = `${btnH * 0.4}px monospace`;
+                    ctx.fillStyle = '#000';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(isTouch ? '点击重新开始' : '按 R 重新开始', w / 2, btnY);
+                }
             }
         }
 
