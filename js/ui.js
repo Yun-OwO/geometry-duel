@@ -25,6 +25,8 @@ class UI {
     initEvents() {
         document.querySelectorAll('.mode-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+                this.playUISound();
+                this.vibrate(10);
                 const mode = btn.dataset.mode;
                 if (mode === 'ai') {
                     this.showAIModeScreen();
@@ -35,54 +37,88 @@ class UI {
         });
 
         document.getElementById('back-to-start-from-ai').addEventListener('click', () => {
+            this.playUISound();
+            this.vibrate(10);
             this.showStartScreen();
         });
 
         document.getElementById('back-to-start').addEventListener('click', () => {
+            this.playUISound();
+            this.vibrate(10);
             this.showStartScreen();
         });
 
         document.querySelectorAll('.ai-count-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+                this.playUISound();
+                this.vibrate(10);
                 this.setAICount(parseInt(btn.dataset.count));
             });
         });
 
         document.getElementById('start-ai-btn').addEventListener('click', () => {
+            this.playUISound();
+            this.vibrate(20);
             this.startAIGame();
         });
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+                this.playUISound();
+                this.vibrate(10);
                 this.switchTab(btn.dataset.tab);
             });
         });
 
         document.querySelectorAll('.count-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+                this.playUISound();
+                this.vibrate(10);
                 this.setPlayerCount(parseInt(btn.dataset.count));
             });
         });
 
         document.getElementById('create-room-btn').addEventListener('click', () => {
+            this.playUISound();
+            this.vibrate(20);
             this.createRoom();
         });
 
         document.getElementById('join-room-btn').addEventListener('click', () => {
+            this.playUISound();
+            this.vibrate(20);
             this.joinRoom();
         });
 
         document.getElementById('copy-room-code').addEventListener('click', () => {
+            this.playUISound();
+            this.vibrate(10);
             this.copyRoomCode();
         });
 
         document.getElementById('leave-room-btn').addEventListener('click', () => {
+            this.playUISound();
+            this.vibrate(10);
             this.leaveRoom();
         });
 
         document.getElementById('start-game-btn').addEventListener('click', () => {
+            this.playUISound();
+            this.vibrate(20);
             this.startOnlineGame();
         });
+    }
+
+    playUISound() {
+        if (this.game && this.game.playSound) {
+            this.game.playSound('lCharge');
+        }
+    }
+
+    vibrate(duration) {
+        if (navigator.vibrate) {
+            try { navigator.vibrate(duration); } catch (e) {}
+        }
     }
 
     initNetworkCallbacks() {

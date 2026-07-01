@@ -114,7 +114,14 @@ class Game {
         return Math.min(this.screenW, this.screenH) * 0.08;
     }
 
+    isLandscape() {
+        return this.screenW > this.screenH;
+    }
+
     getJoystickCenter() {
+        if (this.isLandscape()) {
+            return { x: this.screenW * 0.12, y: this.screenH * 0.5 };
+        }
         return { x: this.screenW * 0.18, y: this.screenH * 0.82 };
     }
 
@@ -123,10 +130,16 @@ class Game {
     }
 
     getZButtonPos() {
+        if (this.isLandscape()) {
+            return { x: this.screenW * 0.9, y: this.screenH * 0.6 };
+        }
         return { x: this.screenW * 0.82, y: this.screenH * 0.82 };
     }
 
     getXButtonPos() {
+        if (this.isLandscape()) {
+            return { x: this.screenW * 0.9, y: this.screenH * 0.35 };
+        }
         return { x: this.screenW * 0.62, y: this.screenH * 0.82 };
     }
 
@@ -148,12 +161,18 @@ class Game {
             const id = t.identifier;
 
             if (this.state === GameState.GAME_OVER) {
-                const btnW = this.screenW * 0.5;
-                const btnH = this.screenH * 0.08;
-                const btnY = this.screenH / 2 + 30;
-                if (x >= this.screenW / 2 - btnW / 2 && x <= this.screenW / 2 + btnW / 2 &&
-                    y >= btnY - btnH / 2 && y <= btnY + btnH / 2) {
+                const btnW = 280;
+                const btnH = 56;
+                const btnY = 50;
+                const scale = Math.min(this.screenW, this.screenH) / CONFIG.LOGICAL_SIZE;
+                const scaledBtnW = btnW * scale;
+                const scaledBtnH = btnH * scale;
+                const scaledBtnY = this.screenH / 2 + btnY * scale;
+                if (x >= this.screenW / 2 - scaledBtnW / 2 && x <= this.screenW / 2 + scaledBtnW / 2 &&
+                    y >= scaledBtnY - scaledBtnH / 2 && y <= scaledBtnY + scaledBtnH / 2) {
                     this.startGame();
+                    this.playSound('lCharge');
+                    this.vibrate(20);
                 }
                 continue;
             }
@@ -172,9 +191,13 @@ class Game {
                 if (x >= this.screenW / 2 - scaledBtnW / 2 && x <= this.screenW / 2 + scaledBtnW / 2 &&
                     y >= startY - scaledBtnH / 2 && y <= startY + scaledBtnH / 2) {
                     this.togglePause();
+                    this.playSound('lCharge');
+                    this.vibrate(15);
                 } else if (x >= this.screenW / 2 - scaledBtnW / 2 && x <= this.screenW / 2 + scaledBtnW / 2 &&
                     y >= menuBtnY - scaledBtnH / 2 && y <= menuBtnY + scaledBtnH / 2) {
                     this.returnToMenu();
+                    this.playSound('lCharge');
+                    this.vibrate(20);
                 }
                 continue;
             }
@@ -184,6 +207,8 @@ class Game {
             if (this.pointInCircle(x, y, pausePos.x, pausePos.y, btnR * 0.7)) {
                 if (!this.touchState.pauseTouched) {
                     this.togglePause();
+                    this.playSound('lCharge');
+                    this.vibrate(15);
                     this.touchState.pauseTouched = true;
                 }
                 this.touchState.pauseId = id;
@@ -196,6 +221,7 @@ class Game {
             if (this.pointInCircle(x, y, zPos.x, zPos.y, btnR)) {
                 this.touchInput.zPressed = true;
                 this.touchState.zId = id;
+                this.vibrate(8);
                 continue;
             }
 
@@ -203,12 +229,19 @@ class Game {
             if (this.pointInCircle(x, y, xPos.x, xPos.y, btnR)) {
                 this.touchInput.xPressed = true;
                 this.touchState.xId = id;
+                this.vibrate(8);
                 continue;
             }
 
             const joyCenter = this.getJoystickCenter();
             const joyR = this.getJoystickRadius();
-            if (x < this.screenW * 0.45 && y > this.screenH * 0.55) {
+            let inJoystickArea = false;
+            if (this.isLandscape()) {
+                inJoystickArea = x < this.screenW * 0.3 && y > this.screenH * 0.2 && y < this.screenH * 0.8;
+            } else {
+                inJoystickArea = x < this.screenW * 0.45 && y > this.screenH * 0.55;
+            }
+            if (inJoystickArea) {
                 this.touchState.joystickId = id;
                 this.updateJoystick(x, y);
                 continue;
@@ -290,6 +323,12 @@ class Game {
     playSound(name) {
         if (this.audioEnabled && this.audio[name]) {
             try { this.audio[name].play(); } catch (e) {}
+        }
+    }
+
+    vibrate(duration) {
+        if (navigator.vibrate) {
+            try { navigator.vibrate(duration); } catch (e) {}
         }
     }
 
@@ -877,10 +916,6 @@ class Game {
 
     drawUI(ctx) {
         if (this.state === GameState.PAUSED) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-            const size = CONFIG.LOGICAL_SIZE;
-            ctx.fillRect(-size / 2, -size / 2, size, size);
-
             ctx.fillStyle = '#000';
             ctx.font = 'bold 36px monospace';
             ctx.textAlign = 'center';
@@ -949,6 +984,7 @@ class Game {
                 const titleY = (1 - easeText) * 60;
                 const btnYOffset = (1 - easeText) * 30;
                 const titleScale = 0.8 + easeText * 0.2;
+                const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
                 ctx.save();
                 ctx.globalAlpha = easeText;
@@ -963,9 +999,9 @@ class Game {
                 ctx.fillText(this.winnerId === 0 ? '胜 利' : '失 败', 0, 0);
                 ctx.restore();
 
-                const btnW = 240;
-                const btnH = 50;
-                const btnY = 45 + btnYOffset;
+                const btnW = 280;
+                const btnH = 56;
+                const btnY = 50 + btnYOffset;
 
                 ctx.globalAlpha = easeText * 0.15;
                 ctx.fillStyle = '#000';
@@ -976,7 +1012,7 @@ class Game {
                 ctx.fillStyle = '#000';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('按 R 重新开始', 0, btnY);
+                ctx.fillText(isTouch ? '点击重新开始' : '按 R 重新开始', 0, btnY);
 
                 ctx.restore();
             }
@@ -1060,26 +1096,10 @@ class Game {
         }
 
         if (this.state === GameState.PAUSED) {
-            ctx.globalAlpha = 0.7;
+            ctx.globalAlpha = 0.85;
             ctx.fillStyle = '#fff';
             ctx.fillRect(0, 0, w, h);
-
             ctx.globalAlpha = 1;
-            ctx.fillStyle = '#000';
-            ctx.font = `${Math.min(w, h) * 0.06}px monospace`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('暂停中', w / 2, h / 2 - 30 * dpr);
-
-            const btnW = w * 0.4;
-            const btnH = h * 0.08;
-            const btnY = h / 2 + 30 * dpr;
-            ctx.globalAlpha = 0.2;
-            ctx.fillStyle = '#000';
-            ctx.fillRect(w / 2 - btnW / 2, btnY - btnH / 2, btnW, btnH);
-            ctx.globalAlpha = 1;
-            ctx.font = `${btnH * 0.5}px monospace`;
-            ctx.fillText('继续', w / 2, btnY);
         }
 
         if (this.deathAnimationPending || this.state === GameState.GAME_OVER) {
@@ -1117,44 +1137,9 @@ class Game {
                 }
                 ctx.fillRect(0, 0, w, h);
             }
-
-            if (this.state === GameState.GAME_OVER) {
-                const textAlpha = this.gameOverTextIn || 0;
-                if (textAlpha > 0) {
-                    const easeText = textAlpha * textAlpha * (3 - 2 * textAlpha);
-                    const titleY = (1 - easeText) * 80 * dpr;
-                    const btnYOffset = (1 - easeText) * 40 * dpr;
-                    const titleScale = 0.7 + easeText * 0.3;
-
-                    ctx.globalAlpha = easeText;
-
-                    ctx.save();
-                    ctx.translate(w / 2, h / 2 - 50 * dpr + titleY);
-                    ctx.scale(titleScale, titleScale);
-                    ctx.fillStyle = '#000';
-                    ctx.font = `${Math.min(w, h) * 0.08}px monospace`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(this.winnerId === 0 ? '胜利！' : '失败...', 0, 0);
-                    ctx.restore();
-
-                    const btnW = w * 0.5;
-                    const btnH = h * 0.08;
-                    const btnY = h / 2 + 30 * dpr + btnYOffset;
-
-                    ctx.globalAlpha = easeText * 0.2;
-                    ctx.fillStyle = '#000';
-                    ctx.fillRect(w / 2 - btnW / 2, btnY - btnH / 2, btnW, btnH);
-
-                    ctx.globalAlpha = easeText;
-                    ctx.font = `${btnH * 0.5}px monospace`;
-                    ctx.fillStyle = '#000';
-                    ctx.fillText('重新开始', w / 2, btnY);
-                }
-            }
-
-            ctx.globalAlpha = 1;
         }
+
+        ctx.globalAlpha = 1;
 
         ctx.restore();
     }

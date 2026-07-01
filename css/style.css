@@ -603,3 +603,96 @@ html, body {
         width: 100%;
     }
 }
+
+@media (orientation: landscape) and (max-height: 600px) {
+    .title-wrap {
+        margin-bottom: 24px;
+    }
+
+    .title-geo {
+        width: 120px;
+        height: 120px;
+    }
+
+    .title-geo::before {
+        width: 80px;
+        height: 80px;
+    }
+
+    .game-title {
+        font-size: clamp(32px, 8vw, 56px);
+    }
+
+    .game-subtitle {
+        font-size: 14px;
+        margin-top: 8px;
+        letter-spacing: 6px;
+    }
+
+    .mode-selector {
+        margin-bottom: 24px;
+        gap: 16px;
+    }
+
+    .mode-btn {
+        padding: 20px 28px;
+        min-width: 160px;
+    }
+
+    .mode-icon {
+        font-size: 24px;
+        margin-bottom: 2px;
+    }
+
+    .mode-label {
+        font-size: 15px;
+    }
+
+    .mode-desc {
+        font-size: 11px;
+    }
+
+    .hint-text {
+        font-size: 12px;
+    }
+
+    .room-panel, .lobby-panel {
+        padding: 28px 36px;
+        min-width: 380px;
+    }
+
+    .room-title {
+        font-size: 22px;
+        margin-bottom: 20px;
+    }
+
+    .room-tabs {
+        margin-bottom: 20px;
+    }
+
+    .player-count, .room-code-input {
+        margin-bottom: 16px;
+    }
+
+    .player-list {
+        gap: 8px;
+        margin-bottom: 20px;
+        min-height: auto;
+    }
+
+    .player-slot {
+        padding: 10px 16px;
+    }
+
+    .ai-count-btn {
+        padding: 14px 8px;
+    }
+
+    .ai-count-btn .count-num {
+        font-size: 20px;
+    }
+
+    .ai-count-btn .count-sub {
+        font-size: 10px;
+    }
+}
