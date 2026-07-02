@@ -587,11 +587,9 @@ class Game {
         if (this.endlessMode) {
             if (this.winnerId === 0) {
                 this.endlessWins++;
-                this.endlessRound++;
-            } else {
-                this.evolveAI();
-                this.endlessRound++;
             }
+            this.endlessRound++;
+            this.evolveAI();
         }
     }
 
