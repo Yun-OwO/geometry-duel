@@ -79,7 +79,7 @@ class UI {
             });
         });
 
-        document.querySelectorAll('.count-btn').forEach(btn => {
+        document.querySelectorAll('#tab-create .count-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.playUISound();
                 this.vibrate(10);
@@ -215,7 +215,7 @@ class UI {
 
     setPlayerCount(count) {
         this.selectedPlayerCount = count;
-        document.querySelectorAll('.count-btn').forEach(btn => {
+        document.querySelectorAll('#tab-create .count-btn').forEach(btn => {
             btn.classList.toggle('active', parseInt(btn.dataset.count) === count);
         });
     }
