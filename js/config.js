@@ -83,6 +83,10 @@ const AIGeneDefaults = {
     reactionSpeed: 0.4,
     ultimateAggressiveness: 0.3,
     evasionAbility: 0.4,
+    attackStyle: 'basic',
+    movementStyle: 'balanced',
+    ultimateStyle: 'standard',
+    specialTrait: 'none',
 };
 
 const AIGeneRanges = {
@@ -93,8 +97,37 @@ const AIGeneRanges = {
     evasionAbility: { min: 0.2, max: 1.0 },
 };
 
+const AIAlleles = {
+    attackStyle: ['basic', 'rapid', 'heavy', 'spread'],
+    movementStyle: ['balanced', 'aggressive', 'defensive', 'weaving'],
+    ultimateStyle: ['standard', 'quick', 'massive', 'multi'],
+    specialTrait: ['none', 'shield', 'regen', 'dash'],
+};
+
+const AIGeneNames = {
+    level: '基础强度',
+    aimAccuracy: '瞄准精度',
+    reactionSpeed: '反应速度',
+    ultimateAggressiveness: '大招积极性',
+    evasionAbility: '闪避能力',
+    attackStyle: '攻击风格',
+    movementStyle: '移动风格',
+    ultimateStyle: '大招风格',
+    specialTrait: '特殊特性',
+};
+
+const AIAlleleNames = {
+    attackStyle: { basic: '基础', rapid: '速射', heavy: '重炮', spread: '散射' },
+    movementStyle: { balanced: '平衡', aggressive: '激进', defensive: '保守', weaving: '游走' },
+    ultimateStyle: { standard: '标准', quick: '迅捷', massive: '重型', multi: '多发' },
+    specialTrait: { none: '无', shield: '护盾', regen: '再生', dash: '冲刺' },
+};
+
 const AIMutationConfig = {
     beneficialChance: 0.7,
     mutationStrength: 0.15,
     harmfulStrength: 0.08,
+    minMutations: 1,
+    maxMutations: 2,
+    typeGeneChance: 0.5,
 };

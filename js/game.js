@@ -38,6 +38,7 @@ class Game {
                     genes: data.genes || { ...AIGeneDefaults },
                     generation: data.generation || 0,
                     wins: data.wins || 0,
+                    lastMutations: data.lastMutations || [],
                 };
             }
         } catch (e) {}
@@ -45,6 +46,7 @@ class Game {
             genes: { ...AIGeneDefaults },
             generation: 0,
             wins: 0,
+            lastMutations: [],
         };
     }
 
@@ -54,25 +56,68 @@ class Game {
         } catch (e) {}
     }
 
-    mutateGene(value, range) {
+    mutateValueGene(value, range) {
         const isBeneficial = Math.random() < AIMutationConfig.beneficialChance;
         const strength = isBeneficial ? AIMutationConfig.mutationStrength : AIMutationConfig.harmfulStrength;
         const direction = isBeneficial ? 1 : -1;
         const mutation = (Math.random() * strength) * direction;
         let newValue = value + mutation;
         newValue = Math.max(range.min, Math.min(range.max, newValue));
-        return newValue;
+        return { value: newValue, beneficial: isBeneficial };
+    }
+
+    mutateTypeGene(currentValue, geneName) {
+        const alleles = AIAlleles[geneName];
+        if (!alleles || alleles.length <= 1) return { value: currentValue, beneficial: false };
+        const otherAlleles = alleles.filter(a => a !== currentValue);
+        const newValue = otherAlleles[Math.floor(Math.random() * otherAlleles.length)];
+        const isBeneficial = Math.random() < AIMutationConfig.beneficialChance;
+        return { value: newValue, beneficial: isBeneficial };
     }
 
     evolveAI() {
-        const oldGenes = this.aiGenes.genes;
-        const newGenes = {};
-        for (const key in AIGeneRanges) {
-            newGenes[key] = this.mutateGene(oldGenes[key], AIGeneRanges[key]);
+        const oldGenes = { ...this.aiGenes.genes };
+        const newGenes = { ...oldGenes };
+        const mutations = [];
+
+        const valueGenes = Object.keys(AIGeneRanges);
+        const typeGenes = Object.keys(AIAlleles);
+
+        const mutationCount = AIMutationConfig.minMutations +
+            Math.floor(Math.random() * (AIMutationConfig.maxMutations - AIMutationConfig.minMutations + 1));
+
+        const allGenes = [...valueGenes, ...typeGenes];
+        const shuffled = allGenes.sort(() => Math.random() - 0.5);
+        const selectedGenes = shuffled.slice(0, mutationCount);
+
+        for (const gene of selectedGenes) {
+            if (AIGeneRanges[gene]) {
+                const result = this.mutateValueGene(oldGenes[gene], AIGeneRanges[gene]);
+                newGenes[gene] = result.value;
+                mutations.push({
+                    gene: gene,
+                    oldValue: oldGenes[gene],
+                    newValue: result.value,
+                    type: 'value',
+                    beneficial: result.beneficial,
+                });
+            } else if (AIAlleles[gene]) {
+                const result = this.mutateTypeGene(oldGenes[gene], gene);
+                newGenes[gene] = result.value;
+                mutations.push({
+                    gene: gene,
+                    oldValue: oldGenes[gene],
+                    newValue: result.value,
+                    type: 'allele',
+                    beneficial: result.beneficial,
+                });
+            }
         }
+
         this.aiGenes.genes = newGenes;
         this.aiGenes.generation++;
         this.aiGenes.wins++;
+        this.aiGenes.lastMutations = mutations;
         this.saveAIGenes();
     }
 
@@ -81,6 +126,7 @@ class Game {
             genes: { ...AIGeneDefaults },
             generation: 0,
             wins: 0,
+            lastMutations: [],
         };
         this.saveAIGenes();
     }
@@ -225,7 +271,10 @@ class Game {
                 const minDim = Math.min(this.screenW, this.screenH);
                 const btnW = minDim * 0.5;
                 const btnH = minDim * 0.09;
-                const btnY = this.screenH / 2 + minDim * 0.05;
+                const hasMutations = this.endlessMode && this.winnerId === 0 &&
+                    this.aiGenes.lastMutations && this.aiGenes.lastMutations.length > 0;
+                const extraContent = this.endlessMode ? (hasMutations ? minDim * 0.22 : minDim * 0.12) : 0;
+                const btnY = this.screenH / 2 + (this.endlessMode ? minDim * 0.08 : minDim * 0.05) + extraContent / 2;
                 if (x >= this.screenW / 2 - btnW / 2 && x <= this.screenW / 2 + btnW / 2 &&
                     y >= btnY - btnH / 2 && y <= btnY + btnH / 2) {
                     this.startGame();
@@ -819,14 +868,22 @@ class Game {
             }
 
             if (hitPlayer) {
-                if (b.lethal) {
+                const ctrl = hitPlayer.isPlayer ? null : this.aiControllers.find(c => c.aiId === hitPlayer.id);
+                const hasShield = ctrl && ctrl.getSpecialTrait() === 'shield' && ctrl.shieldActive > 0;
+
+                if (b.lethal && !hasShield) {
                     this.onPlayerDeath(hitPlayer.id, b.ownerId);
-                } else {
-                    this.thrust(hitPlayer, b);
-                    hitPlayer.state = PlayerState.STUN;
-                    hitPlayer.stunTime = CONFIG.STUN_DURATION;
-                    const colors = PLAYER_COLORS[b.ownerId % PLAYER_COLORS.length];
-                    this.addParticles(b.x, b.y, 5, 5, 1, 3, 0.5, colors.body);
+                } else if (!b.lethal) {
+                    if (hasShield) {
+                        const colors = PLAYER_COLORS[hitPlayer.id % PLAYER_COLORS.length];
+                        this.addParticles(b.x, b.y, 8, 4, 2, 5, 0.4, colors.glow + '0.8)');
+                    } else {
+                        this.thrust(hitPlayer, b);
+                        hitPlayer.state = PlayerState.STUN;
+                        hitPlayer.stunTime = CONFIG.STUN_DURATION;
+                        const colors = PLAYER_COLORS[b.ownerId % PLAYER_COLORS.length];
+                        this.addParticles(b.x, b.y, 5, 5, 1, 3, 0.5, colors.body);
+                    }
                 }
 
                 this.bullets.splice(i, 1);
@@ -855,22 +912,37 @@ class Game {
         this.bullets.push(bullet);
     }
 
-    spawnUltimateBullets(shooterX, shooterY, angle, ownerId) {
-        const offset = CONFIG.ULTIMATE_LASER_LENGTH / 2 + 20;
-        const bx = shooterX + offset * Math.cos(angle);
-        const by = shooterY + offset * Math.sin(angle);
-        this.spawnBullet(bx, by, angle, CONFIG.ULTIMATE_BULLET_SPEED, true, ownerId, true);
+    spawnUltimateBullets(shooterX, shooterY, angle, ownerId, style = 'standard') {
+        const colors = PLAYER_COLORS[ownerId % PLAYER_COLORS.length];
+
+        const fireOne = (ang) => {
+            const offset = CONFIG.ULTIMATE_LASER_LENGTH / 2 + 20;
+            const bx = shooterX + offset * Math.cos(ang);
+            const by = shooterY + offset * Math.sin(ang);
+            const speed = style === 'quick' ? CONFIG.ULTIMATE_BULLET_SPEED * 1.2 :
+                          style === 'massive' ? CONFIG.ULTIMATE_BULLET_SPEED * 0.8 :
+                          CONFIG.ULTIMATE_BULLET_SPEED;
+            this.spawnBullet(bx, by, ang, speed, true, ownerId, true);
+
+            const particleCount = style === 'massive' ? 18 : 12;
+            for (let i = 0; i < particleCount; i++) {
+                const spreadAngle = ang + (Math.random() - 0.5) * 0.8;
+                const spd = 2 + Math.random() * 6;
+                const px = shooterX + 20 * Math.cos(ang);
+                const py = shooterY + 20 * Math.sin(ang);
+                const color = colors.laserInner;
+                this.addParticles(px, py, 1, 3 + Math.random() * 3, spd * 0.5, spd, 0.3 + Math.random() * 0.3, color);
+            }
+        };
+
         this.playSound('lFire');
 
-        const colors = PLAYER_COLORS[ownerId % PLAYER_COLORS.length];
-        const particleCount = 12;
-        for (let i = 0; i < particleCount; i++) {
-            const spreadAngle = angle + (Math.random() - 0.5) * 0.8;
-            const speed = 2 + Math.random() * 6;
-            const px = shooterX + 20 * Math.cos(angle);
-            const py = shooterY + 20 * Math.sin(angle);
-            const color = colors.laserInner;
-            this.addParticles(px, py, 1, 3 + Math.random() * 3, speed * 0.5, speed, 0.3 + Math.random() * 0.3, color);
+        if (style === 'multi') {
+            fireOne(angle - 0.15);
+            fireOne(angle);
+            fireOne(angle + 0.15);
+        } else {
+            fireOne(angle);
         }
     }
 
@@ -1144,8 +1216,11 @@ class Game {
                     const titleYOffset = this.endlessMode ? (1 - easeText) * minDim * 0.06 : (1 - easeText) * minDim * 0.1;
                     const btnYOffset = (1 - easeText) * minDim * 0.06;
                     const titleScale = 0.7 + easeText * 0.3;
-                    const titleY = h / 2 - (this.endlessMode ? minDim * 0.06 : minDim * 0.08) + titleYOffset;
-                    const btnY = h / 2 + (this.endlessMode ? minDim * 0.08 : minDim * 0.05) + btnYOffset;
+                    const hasMutations = this.endlessMode && this.winnerId === 0 &&
+                        this.aiGenes.lastMutations && this.aiGenes.lastMutations.length > 0;
+                    const extraContent = this.endlessMode ? (hasMutations ? minDim * 0.22 : minDim * 0.12) : 0;
+                    const titleY = h / 2 - (this.endlessMode ? minDim * 0.06 : minDim * 0.08) - extraContent / 2 + titleYOffset;
+                    const btnY = h / 2 + (this.endlessMode ? minDim * 0.08 : minDim * 0.05) + extraContent / 2 + btnYOffset;
 
                     ctx.globalAlpha = easeText;
 
@@ -1174,6 +1249,43 @@ class Game {
                         const scoreY = infoY + minDim * 0.045;
                         ctx.font = `${minDim * 0.035}px monospace`;
                         ctx.fillText(scoreText, w / 2, scoreY);
+
+                        const traitY = scoreY + minDim * 0.04;
+                        const attackName = AIAlleleNames.attackStyle[genes.attackStyle] || genes.attackStyle;
+                        const moveName = AIAlleleNames.movementStyle[genes.movementStyle] || genes.movementStyle;
+                        const ultName = AIAlleleNames.ultimateStyle[genes.ultimateStyle] || genes.ultimateStyle;
+                        const traitName = AIAlleleNames.specialTrait[genes.specialTrait] || genes.specialTrait;
+                        const traitText = `攻击${attackName} · 移动${moveName} · 大招${ultName}${genes.specialTrait !== 'none' ? ' · ' + traitName : ''}`;
+                        ctx.font = `${minDim * 0.025}px monospace`;
+                        ctx.globalAlpha = easeText * 0.7;
+                        ctx.fillText(traitText, w / 2, traitY);
+
+                        if (this.winnerId === 0 && this.aiGenes.lastMutations && this.aiGenes.lastMutations.length > 0) {
+                            ctx.globalAlpha = easeText;
+                            ctx.font = `bold ${minDim * 0.03}px monospace`;
+                            ctx.fillStyle = '#1a6b1a';
+                            const mutTitleY = traitY + minDim * 0.045;
+                            ctx.fillText('AI 发生突变!', w / 2, mutTitleY);
+
+                            ctx.font = `${minDim * 0.025}px monospace`;
+                            for (let i = 0; i < this.aiGenes.lastMutations.length; i++) {
+                                const m = this.aiGenes.lastMutations[i];
+                                const geneName = AIGeneNames[m.gene] || m.gene;
+                                let mutText = '';
+                                if (m.type === 'allele') {
+                                    const oldName = AIAlleleNames[m.gene] ? (AIAlleleNames[m.gene][m.oldValue] || m.oldValue) : m.oldValue;
+                                    const newName = AIAlleleNames[m.gene] ? (AIAlleleNames[m.gene][m.newValue] || m.newValue) : m.newValue;
+                                    mutText = `${geneName}: ${oldName} → ${newName}`;
+                                } else {
+                                    const diff = m.newValue - m.oldValue;
+                                    const sign = diff > 0 ? '+' : '';
+                                    mutText = `${geneName}: ${sign}${(diff * 100).toFixed(1)}%`;
+                                }
+                                ctx.fillStyle = m.beneficial ? '#1a6b1a' : '#8b1a1a';
+                                const mutY = mutTitleY + minDim * 0.035 * (i + 1);
+                                ctx.fillText(mutText, w / 2, mutY);
+                            }
+                        }
                     }
 
                     ctx.globalAlpha = easeText * 0.15;
@@ -1308,7 +1420,17 @@ class Player {
 
         if (this.attackCooldown <= 0) {
             this.fireNormal();
-            this.attackCooldown = CONFIG.NORMAL_BULLET_INTERVAL;
+            let interval = CONFIG.NORMAL_BULLET_INTERVAL;
+            if (!this.isPlayer) {
+                const ctrl = this.game.aiControllers.find(c => c.aiId === this.id);
+                if (ctrl) {
+                    const style = ctrl.getAttackStyle();
+                    if (style === 'rapid') interval *= 0.6;
+                    if (style === 'heavy') interval *= 1.6;
+                    if (style === 'spread') interval *= 1.3;
+                }
+            }
+            this.attackCooldown = interval;
         }
 
         if (!input.zPressed) {
@@ -1469,13 +1591,41 @@ class Player {
         const offset = 24;
         const bx = this.x + offset * Math.cos(this.aimAngle);
         const by = this.y + offset * Math.sin(this.aimAngle);
-        this.game.spawnBullet(bx, by, this.aimAngle, CONFIG.NORMAL_BULLET_SPEED, false, this.id, false);
+
+        if (this.isPlayer) {
+            this.game.spawnBullet(bx, by, this.aimAngle, CONFIG.NORMAL_BULLET_SPEED, false, this.id, false);
+        } else {
+            const ctrl = this.game.aiControllers.find(c => c.aiId === this.id);
+            const style = ctrl ? ctrl.getAttackStyle() : 'basic';
+
+            if (style === 'rapid') {
+                this.game.spawnBullet(bx, by, this.aimAngle, CONFIG.NORMAL_BULLET_SPEED * 0.9, false, this.id, false);
+            } else if (style === 'heavy') {
+                this.game.spawnBullet(bx, by, this.aimAngle, CONFIG.NORMAL_BULLET_SPEED * 1.3, false, this.id, false);
+            } else if (style === 'spread') {
+                for (let i = -1; i <= 1; i++) {
+                    const angle = this.aimAngle + i * 0.25;
+                    const spreadX = this.x + offset * Math.cos(angle);
+                    const spreadY = this.y + offset * Math.sin(angle);
+                    this.game.spawnBullet(spreadX, spreadY, angle, CONFIG.NORMAL_BULLET_SPEED * 0.85, false, this.id, false);
+                }
+            } else {
+                this.game.spawnBullet(bx, by, this.aimAngle, CONFIG.NORMAL_BULLET_SPEED, false, this.id, false);
+            }
+        }
+
         this.game.playSound('sFire');
         this.normalShotCount++;
     }
 
     fireUltimate() {
-        this.game.spawnUltimateBullets(this.x, this.y, this.aimAngle, this.id);
+        if (this.isPlayer) {
+            this.game.spawnUltimateBullets(this.x, this.y, this.aimAngle, this.id, 'standard');
+        } else {
+            const ctrl = this.game.aiControllers.find(c => c.aiId === this.id);
+            const style = ctrl ? ctrl.getUltimateStyle() : 'standard';
+            this.game.spawnUltimateBullets(this.x, this.y, this.aimAngle, this.id, style);
+        }
     }
 
     draw(ctx) {
@@ -1515,6 +1665,24 @@ class Player {
             ctx.fillStyle = 'rgba(192, 64, 64, 0.4)';
             ctx.fillRect(-s / 2, -s / 2, s, s);
             ctx.restore();
+        }
+
+        if (!this.isPlayer) {
+            const ctrl = this.game.aiControllers.find(c => c.aiId === this.id);
+            if (ctrl && ctrl.getSpecialTrait() === 'shield' && ctrl.shieldActive > 0) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.globalAlpha = 0.6 * Math.min(ctrl.shieldActive, 1);
+                ctx.strokeStyle = this.colors.glow + '0.9)';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(0, 0, s * 1.2, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 0.15;
+                ctx.fillStyle = this.colors.glow + '1)';
+                ctx.fill();
+                ctx.restore();
+            }
         }
     }
 
@@ -1945,6 +2113,10 @@ class AIController {
         this.verticalMove = 0;
         this.killCooldown = 0;
         this.planTimer = 0;
+        this.dashCooldown = 0;
+        this.shieldCooldown = 0;
+        this.shieldActive = 0;
+        this.weavePhase = 0;
         this.genes = genes || { ...AIGeneDefaults };
     }
 
@@ -1966,6 +2138,22 @@ class AIController {
 
     getReactionSpeed() {
         return this.genes.reactionSpeed;
+    }
+
+    getAttackStyle() {
+        return this.genes.attackStyle;
+    }
+
+    getMovementStyle() {
+        return this.genes.movementStyle;
+    }
+
+    getUltimateStyle() {
+        return this.genes.ultimateStyle;
+    }
+
+    getSpecialTrait() {
+        return this.genes.specialTrait;
     }
 
     getNearestEnemy(ai) {
@@ -2063,8 +2251,15 @@ class AIController {
         const ultAggro = this.getUltimateAggressiveness();
         const aimAcc = this.getAimAccuracy();
         const evasion = this.getEvasionAbility();
+        const movementStyle = this.getMovementStyle();
+        const specialTrait = this.getSpecialTrait();
+        const ultimateStyle = this.getUltimateStyle();
         const half = CONFIG.LOGICAL_SIZE / 2;
-        const canUseUltimate = ai.normalShotCount >= CONFIG.AI_ULTIMATE_MIN_JABS;
+
+        let ultimateThreshold = CONFIG.AI_ULTIMATE_MIN_JABS;
+        if (ultimateStyle === 'quick') ultimateThreshold = Math.floor(ultimateThreshold * 0.6);
+        if (ultimateStyle === 'massive') ultimateThreshold = Math.floor(ultimateThreshold * 1.5);
+        const canUseUltimate = ai.normalShotCount >= ultimateThreshold;
 
         let nearestArrow = null;
         let minDist = Infinity;
@@ -2080,10 +2275,33 @@ class AIController {
             }
         }
 
+        if (specialTrait === 'dash' && this.dashCooldown > 0) this.dashCooldown -= dt;
+        if (specialTrait === 'shield' && this.shieldCooldown > 0) this.shieldCooldown -= dt;
+        if (specialTrait === 'shield' && this.shieldActive > 0) this.shieldActive -= dt;
+
+        if (specialTrait === 'dash' && this.dashCooldown <= 0 && minDist < 40000 && nearestArrow) {
+            const bulletAngle = nearestArrow.angle;
+            const playerAngle = Math.atan2(ai.y - nearestArrow.y, ai.x - nearestArrow.x);
+            let dashAngle = bulletAngle;
+            if (playerAngle - bulletAngle > 0) {
+                dashAngle += Math.PI / 2;
+            } else {
+                dashAngle -= Math.PI / 2;
+            }
+            ai.velX += Math.cos(dashAngle) * 8;
+            ai.velY += Math.sin(dashAngle) * 6;
+            this.dashCooldown = 3.0 + Math.random() * 2;
+        }
+
+        if (specialTrait === 'shield' && this.shieldCooldown <= 0 && minDist < 30000) {
+            this.shieldActive = 1.0;
+            this.shieldCooldown = 8.0 + Math.random() * 4;
+        }
+
         if (this.currentPlan === 'kill') {
             if (!canUseUltimate) {
                 this.currentPlan = 'jab';
-                this.setMoveDirection(ai, target);
+                this.setMoveDirection(ai, target, movementStyle);
                 return;
             }
             this.setKillDirection(ai, target);
@@ -2117,7 +2335,10 @@ class AIController {
 
         const distToPlayer = this.distPow2(ai, target);
 
-        if (distToPlayer < 80000 && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.18 * ultAggro) {
+        const closeDist = movementStyle === 'aggressive' ? 100000 : 80000;
+        const farDist = movementStyle === 'defensive' ? 200000 : 150000;
+
+        if (distToPlayer < closeDist && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.18 * ultAggro) {
             this.currentPlan = 'kill';
             ai.aimAngle += (Math.random() - 0.5) * 0.35 * (1 - aimAcc);
             this.setKillDirection(ai, target);
@@ -2125,7 +2346,7 @@ class AIController {
             return;
         }
 
-        if (distToPlayer < 150000 && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.12 * ultAggro) {
+        if (distToPlayer < farDist && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.12 * ultAggro) {
             this.currentPlan = 'kill';
             ai.aimAngle += (Math.random() - 0.5) * 0.3 * (1 - aimAcc);
             this.setKillDirection(ai, target);
@@ -2133,8 +2354,8 @@ class AIController {
             return;
         }
 
-        if (distToPlayer < 150000) {
-            this.setMoveDirection(ai, target);
+        if (distToPlayer < farDist) {
+            this.setMoveDirection(ai, target, movementStyle);
             this.currentPlan = Math.random() < 0.5 ? 'move' : 'jab';
             return;
         }
@@ -2151,22 +2372,61 @@ class AIController {
         } else {
             this.currentPlan = 'jab';
         }
-        this.setMoveDirection(ai, target);
+        this.setMoveDirection(ai, target, movementStyle);
     }
 
-    setMoveDirection(ai, target) {
+    setMoveDirection(ai, target, style = 'balanced') {
         const half = CONFIG.LOGICAL_SIZE / 2;
         let tx, ty;
 
-        if (target.x > 0) {
-            tx = -half + Math.random() * (half * 0.5);
+        if (style === 'aggressive') {
+            const dist = Math.sqrt(this.distPow2(ai, target));
+            const idealDist = 120;
+            if (dist > idealDist + 30) {
+                tx = target.x;
+                ty = target.y;
+            } else if (dist < idealDist - 30) {
+                tx = -target.x;
+                ty = -target.y;
+            } else {
+                this.weavePhase += 0.15;
+                const perpAngle = Math.atan2(target.y - ai.y, target.x - ai.x) + Math.PI / 2;
+                tx = ai.x + Math.cos(perpAngle) * 80 * Math.sin(this.weavePhase);
+                ty = ai.y + Math.sin(perpAngle) * 80 * Math.sin(this.weavePhase);
+            }
+        } else if (style === 'defensive') {
+            const dist = Math.sqrt(this.distPow2(ai, target));
+            const idealDist = 250;
+            if (dist < idealDist - 30) {
+                tx = -target.x;
+                ty = -target.y;
+            } else if (dist > idealDist + 30) {
+                tx = target.x;
+                ty = target.y;
+            } else {
+                this.weavePhase += 0.1;
+                const perpAngle = Math.atan2(target.y - ai.y, target.x - ai.x) + Math.PI / 2;
+                tx = ai.x + Math.cos(perpAngle) * 100 * Math.sin(this.weavePhase);
+                ty = ai.y + Math.sin(perpAngle) * 100 * Math.sin(this.weavePhase);
+            }
+        } else if (style === 'weaving') {
+            this.weavePhase += 0.12;
+            const baseAngle = Math.atan2(target.y - ai.y, target.x - ai.x);
+            const perpAngle = baseAngle + Math.PI / 2;
+            const weaveAmt = 120 * Math.sin(this.weavePhase);
+            tx = ai.x + Math.cos(baseAngle) * 50 + Math.cos(perpAngle) * weaveAmt;
+            ty = ai.y + Math.sin(baseAngle) * 50 + Math.sin(perpAngle) * weaveAmt;
         } else {
-            tx = Math.random() * (half * 0.5);
-        }
-        if (target.y > 0) {
-            ty = -half + Math.random() * (half * 0.5);
-        } else {
-            ty = Math.random() * (half * 0.5);
+            if (target.x > 0) {
+                tx = -half + Math.random() * (half * 0.5);
+            } else {
+                tx = Math.random() * (half * 0.5);
+            }
+            if (target.y > 0) {
+                ty = -half + Math.random() * (half * 0.5);
+            } else {
+                ty = Math.random() * (half * 0.5);
+            }
         }
 
         const allowance = 100;
