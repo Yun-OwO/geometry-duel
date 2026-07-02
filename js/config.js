@@ -2,6 +2,8 @@ const PLAYER_COLORS = [
     { body: '#ffffff', stroke: '#000000', orbit: 'rgba(45, 65, 140, ', glow: 'rgba(90, 140, 255, ', laserCore: '#101030', laserOuter: 'rgba(60, 100, 255, 0.25)', laserMid: 'rgba(100, 150, 255, 0.5)', laserInner: 'rgba(180, 200, 255, 0.8)', deathShard: '#303060', deathGlow: 'rgba(100, 120, 255, 0.6)', bullet: '#808080' },
     { body: '#000000', stroke: '#ffffff', orbit: 'rgba(155, 115, 30, ', glow: 'rgba(255, 200, 80, ', laserCore: '#fff8e0', laserOuter: 'rgba(255, 200, 60, 0.25)', laserMid: 'rgba(255, 220, 100, 0.5)', laserInner: 'rgba(255, 240, 180, 0.8)', deathShard: '#606080', deathGlow: 'rgba(255, 200, 100, 0.6)', bullet: '#a0a0a0' },
     { body: '#8b0000', stroke: '#ff6b6b', orbit: 'rgba(120, 30, 30, ', glow: 'rgba(255, 100, 100, ', laserCore: '#300000', laserOuter: 'rgba(255, 60, 60, 0.25)', laserMid: 'rgba(255, 100, 100, 0.5)', laserInner: 'rgba(255, 150, 150, 0.8)', deathShard: '#603030', deathGlow: 'rgba(255, 100, 100, 0.6)', bullet: '#c06060' },
+    { body: '#006400', stroke: '#90ee90', orbit: 'rgba(30, 100, 30, ', glow: 'rgba(100, 255, 100, ', laserCore: '#003000', laserOuter: 'rgba(60, 255, 60, 0.25)', laserMid: 'rgba(100, 255, 100, 0.5)', laserInner: 'rgba(150, 255, 150, 0.8)', deathShard: '#306030', deathGlow: 'rgba(100, 255, 100, 0.6)', bullet: '#60c060' },
+    { body: '#4b0082', stroke: '#dda0dd', orbit: 'rgba(80, 30, 130, ', glow: 'rgba(200, 100, 255, ', laserCore: '#200040', laserOuter: 'rgba(150, 60, 255, 0.25)', laserMid: 'rgba(200, 100, 255, 0.5)', laserInner: 'rgba(220, 150, 255, 0.8)', deathShard: '#403060', deathGlow: 'rgba(200, 100, 255, 0.6)', bullet: '#a060c0' },
 ];
 
 const CONFIG = {
@@ -87,6 +89,7 @@ const AIGeneDefaults = {
     movementStyle: 'balanced',
     ultimateStyle: 'standard',
     specialTrait: 'none',
+    strategyMutation: 'none',
 };
 
 const AIGeneRanges = {
@@ -102,6 +105,7 @@ const AIAlleles = {
     movementStyle: ['balanced', 'aggressive', 'defensive', 'weaving'],
     ultimateStyle: ['standard', 'quick', 'massive', 'multi'],
     specialTrait: ['none', 'shield', 'regen', 'dash'],
+    strategyMutation: ['none', 'only_ultimate', 'only_linear', 'no_attack', 'chase_only', 'stay_corner', 'mirror_move', 'predictive', 'berserker', 'turtle'],
 };
 
 const AIGeneNames = {
@@ -114,6 +118,7 @@ const AIGeneNames = {
     movementStyle: '移动风格',
     ultimateStyle: '大招风格',
     specialTrait: '特殊特性',
+    strategyMutation: '策略突变',
 };
 
 const AIAlleleNames = {
@@ -121,6 +126,18 @@ const AIAlleleNames = {
     movementStyle: { balanced: '平衡', aggressive: '激进', defensive: '保守', weaving: '游走' },
     ultimateStyle: { standard: '标准', quick: '迅捷', massive: '重型', multi: '多发' },
     specialTrait: { none: '无', shield: '护盾', regen: '再生', dash: '冲刺' },
+    strategyMutation: {
+        none: '无',
+        only_ultimate: '只放大招',
+        only_linear: '直线移动',
+        no_attack: '不攻击',
+        chase_only: '只追击',
+        stay_corner: '守角落',
+        mirror_move: '镜像移动',
+        predictive: '预判走位',
+        berserker: '狂暴模式',
+        turtle: '缩壳防御',
+    },
 };
 
 const AIMutationConfig = {
@@ -130,4 +147,5 @@ const AIMutationConfig = {
     minMutations: 1,
     maxMutations: 2,
     typeGeneChance: 0.5,
+    strategyMutationChance: 0.3,
 };

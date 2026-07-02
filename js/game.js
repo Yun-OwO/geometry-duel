@@ -1255,7 +1255,10 @@ class Game {
                         const moveName = AIAlleleNames.movementStyle[genes.movementStyle] || genes.movementStyle;
                         const ultName = AIAlleleNames.ultimateStyle[genes.ultimateStyle] || genes.ultimateStyle;
                         const traitName = AIAlleleNames.specialTrait[genes.specialTrait] || genes.specialTrait;
-                        const traitText = `攻击${attackName} · 移动${moveName} · 大招${ultName}${genes.specialTrait !== 'none' ? ' · ' + traitName : ''}`;
+                        const strategyName = AIAlleleNames.strategyMutation[genes.strategyMutation] || genes.strategyMutation;
+                        let traitText = `攻击${attackName} · 移动${moveName} · 大招${ultName}`;
+                        if (genes.specialTrait !== 'none') traitText += ` · ${traitName}`;
+                        if (genes.strategyMutation !== 'none') traitText += ` · ${strategyName}`;
                         ctx.font = `${minDim * 0.025}px monospace`;
                         ctx.globalAlpha = easeText * 0.7;
                         ctx.fillText(traitText, w / 2, traitY);
@@ -2156,6 +2159,10 @@ class AIController {
         return this.genes.specialTrait;
     }
 
+    getStrategyMutation() {
+        return this.genes.strategyMutation;
+    }
+
     getNearestEnemy(ai) {
         let nearest = null;
         let minDist = Infinity;
@@ -2254,6 +2261,7 @@ class AIController {
         const movementStyle = this.getMovementStyle();
         const specialTrait = this.getSpecialTrait();
         const ultimateStyle = this.getUltimateStyle();
+        const strategyMutation = this.getStrategyMutation();
         const half = CONFIG.LOGICAL_SIZE / 2;
 
         let ultimateThreshold = CONFIG.AI_ULTIMATE_MIN_JABS;
@@ -2298,10 +2306,78 @@ class AIController {
             this.shieldCooldown = 8.0 + Math.random() * 4;
         }
 
+        if (strategyMutation === 'turtle') {
+            this.horizontalMove = 0;
+            this.verticalMove = 0;
+            if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.3) {
+                this.currentPlan = 'kill';
+                this.setKillDirection(ai, target);
+                this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_CLOSE;
+            } else {
+                this.currentPlan = 'move';
+            }
+            return;
+        }
+
+        if (strategyMutation === 'stay_corner') {
+            if (!this.cornerTarget) {
+                const corners = [
+                    { x: -half + 80, y: -half + 80 },
+                    { x: half - 80, y: -half + 80 },
+                    { x: -half + 80, y: half - 80 },
+                    { x: half - 80, y: half - 80 },
+                ];
+                this.cornerTarget = corners[Math.floor(Math.random() * corners.length)];
+            }
+            const distToCorner = Math.sqrt((ai.x - this.cornerTarget.x) ** 2 + (ai.y - this.cornerTarget.y) ** 2);
+            if (distToCorner > 30) {
+                this.setMoveDirectionToPoint(ai, this.cornerTarget.x, this.cornerTarget.y, 20);
+            } else {
+                this.horizontalMove = 0;
+                this.verticalMove = 0;
+            }
+            if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.2) {
+                this.currentPlan = 'kill';
+                this.setKillDirection(ai, target);
+                this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_CLOSE;
+            } else {
+                this.currentPlan = strategyMutation === 'no_attack' ? 'move' : (Math.random() < 0.3 ? 'move' : 'jab');
+            }
+            return;
+        }
+
+        if (strategyMutation === 'mirror_move') {
+            const mirrorX = -target.x;
+            const mirrorY = -target.y;
+            const distToMirror = Math.sqrt((ai.x - mirrorX) ** 2 + (ai.y - mirrorY) ** 2);
+            if (distToMirror > 50) {
+                this.setMoveDirectionToPoint(ai, mirrorX, mirrorY, 30);
+            } else {
+                this.horizontalMove = 0;
+                this.verticalMove = 0;
+            }
+            this.currentPlan = Math.random() < 0.5 ? 'move' : 'jab';
+            return;
+        }
+
+        if (strategyMutation === 'predictive' && nearestArrow) {
+            const bulletSpeed = CONFIG.NORMAL_BULLET_SPEED;
+            const distToBullet = Math.sqrt(minDist);
+            const timeToHit = distToBullet / bulletSpeed;
+            const predictedX = ai.x + ai.velX * timeToHit * 2;
+            const predictedY = ai.y + ai.velY * timeToHit * 2;
+            const escapeAngle = nearestArrow.angle + Math.PI;
+            const tx = predictedX + 80 * Math.cos(escapeAngle);
+            const ty = predictedY + 80 * Math.sin(escapeAngle);
+            this.setMoveDirectionToPoint(ai, tx, ty, 0);
+            this.currentPlan = Math.random() < 0.6 ? 'move' : 'jab';
+            return;
+        }
+
         if (this.currentPlan === 'kill') {
             if (!canUseUltimate) {
-                this.currentPlan = 'jab';
-                this.setMoveDirection(ai, target, movementStyle);
+                this.currentPlan = strategyMutation === 'only_ultimate' ? 'move' : 'jab';
+                this.setMoveDirection(ai, target, movementStyle, strategyMutation);
                 return;
             }
             this.setKillDirection(ai, target);
@@ -2329,16 +2405,17 @@ class AIController {
             const tx = ai.x + 100 * Math.cos(escapeAngle);
             const ty = ai.y + 100 * Math.sin(escapeAngle);
             this.setMoveDirectionToPoint(ai, tx, ty, 0);
-            this.currentPlan = Math.random() < 0.7 ? 'move' : 'jab';
+            this.currentPlan = strategyMutation === 'no_attack' ? 'move' : (Math.random() < 0.7 ? 'move' : 'jab');
             return;
         }
 
         const distToPlayer = this.distPow2(ai, target);
 
-        const closeDist = movementStyle === 'aggressive' ? 100000 : 80000;
+        const closeDist = movementStyle === 'aggressive' || strategyMutation === 'berserker' ? 120000 : 80000;
         const farDist = movementStyle === 'defensive' ? 200000 : 150000;
+        const actualUltAggro = strategyMutation === 'berserker' ? ultAggro * 2 : ultAggro;
 
-        if (distToPlayer < closeDist && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.18 * ultAggro) {
+        if (distToPlayer < closeDist && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.18 * actualUltAggro) {
             this.currentPlan = 'kill';
             ai.aimAngle += (Math.random() - 0.5) * 0.35 * (1 - aimAcc);
             this.setKillDirection(ai, target);
@@ -2346,7 +2423,7 @@ class AIController {
             return;
         }
 
-        if (distToPlayer < farDist && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.12 * ultAggro) {
+        if (distToPlayer < farDist && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.12 * actualUltAggro) {
             this.currentPlan = 'kill';
             ai.aimAngle += (Math.random() - 0.5) * 0.3 * (1 - aimAcc);
             this.setKillDirection(ai, target);
@@ -2354,9 +2431,28 @@ class AIController {
             return;
         }
 
-        if (distToPlayer < farDist) {
+        if (strategyMutation === 'chase_only') {
+            this.setMoveDirection(ai, target, 'aggressive');
+            this.currentPlan = Math.random() < 0.3 ? 'move' : 'jab';
+            return;
+        }
+
+        if (strategyMutation === 'only_ultimate') {
             this.setMoveDirection(ai, target, movementStyle);
-            this.currentPlan = Math.random() < 0.5 ? 'move' : 'jab';
+            if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.1 * ultAggro) {
+                this.currentPlan = 'kill';
+                this.setKillDirection(ai, target);
+                this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_CLOSE;
+            } else {
+                this.currentPlan = 'move';
+            }
+            return;
+        }
+
+        if (distToPlayer < farDist) {
+            this.setMoveDirection(ai, target, movementStyle, strategyMutation);
+            const attackChance = strategyMutation === 'berserker' ? 0.7 : 0.5;
+            this.currentPlan = strategyMutation === 'no_attack' ? 'move' : (Math.random() < attackChance ? 'move' : 'jab');
             return;
         }
 
@@ -2370,16 +2466,23 @@ class AIController {
         if (Math.random() < 0.3) {
             this.currentPlan = 'move';
         } else {
-            this.currentPlan = 'jab';
+            this.currentPlan = strategyMutation === 'no_attack' ? 'move' : 'jab';
         }
-        this.setMoveDirection(ai, target, movementStyle);
+        this.setMoveDirection(ai, target, movementStyle, strategyMutation);
     }
 
-    setMoveDirection(ai, target, style = 'balanced') {
+    setMoveDirection(ai, target, style = 'balanced', strategy = 'none') {
         const half = CONFIG.LOGICAL_SIZE / 2;
         let tx, ty;
 
-        if (style === 'aggressive') {
+        if (strategy === 'only_linear') {
+            if (!this.linearAngle) {
+                this.linearAngle = Math.random() * Math.PI * 2;
+            }
+            this.linearAngle += Math.random() * 0.1 - 0.05;
+            tx = ai.x + 150 * Math.cos(this.linearAngle);
+            ty = ai.y + 150 * Math.sin(this.linearAngle);
+        } else if (style === 'aggressive') {
             const dist = Math.sqrt(this.distPow2(ai, target));
             const idealDist = 120;
             if (dist > idealDist + 30) {
