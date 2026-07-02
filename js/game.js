@@ -1230,17 +1230,16 @@ class Player {
 
         this.aimAngle += input.moveX * CONFIG.AIM_SPEED * dt;
 
-        if (this.isPlayer) {
-            const enemy = this.getNearestEnemy();
-            if (enemy) {
-                const toEnemy = Math.atan2(enemy.y - this.y, enemy.x - this.x);
-                let diff = toEnemy - this.aimAngle;
-                while (diff > Math.PI) diff -= Math.PI * 2;
-                while (diff < -Math.PI) diff += Math.PI * 2;
-                const chargeRatio = Math.min(this.chargeTime / CONFIG.ULTIMATE_CHARGE_TIME, 1);
-                const boost = 1 + chargeRatio * (CONFIG.AIM_ASSIST_CHARGE_BOOST - 1);
-                this.aimAngle += diff * CONFIG.AIM_ASSIST_STRENGTH * boost * dt * 10;
-            }
+        const enemy = this.getNearestEnemy();
+        if (enemy) {
+            const toEnemy = Math.atan2(enemy.y - this.y, enemy.x - this.x);
+            let diff = toEnemy - this.aimAngle;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            const chargeRatio = Math.min(this.chargeTime / CONFIG.ULTIMATE_CHARGE_TIME, 1);
+            const boost = 1 + chargeRatio * (CONFIG.AIM_ASSIST_CHARGE_BOOST - 1);
+            const aimStrength = this.isPlayer ? 1 : 0.6;
+            this.aimAngle += diff * CONFIG.AIM_ASSIST_STRENGTH * boost * aimStrength * dt * 10;
         }
 
         this.chargeTime += dt;
@@ -1852,9 +1851,9 @@ class AIController {
                 while (relative < -Math.PI) relative += Math.PI * 2;
 
                 const overcharged = ai.chargeTime >= CONFIG.ULTIMATE_CHARGE_TIME + CONFIG.ULTIMATE_RELEASE_WINDOW;
-                if (Math.abs(relative) < 0.15 || overcharged) {
+                if (Math.abs(relative) < 0.25 || overcharged) {
                     xPressed = false;
-                    if (ai.chargeTime >= CONFIG.ULTIMATE_CHARGE_TIME + 0.08) {
+                    if (ai.chargeTime >= CONFIG.ULTIMATE_CHARGE_TIME + 0.05) {
                         this.currentPlan = 'jab';
                         ai.normalShotCount = 0;
                         const distToPlayer = (ai.x - target.x) ** 2 + (ai.y - target.y) ** 2;
@@ -1955,11 +1954,19 @@ class AIController {
 
         const distToPlayer = this.distPow2(ai, target);
 
-        if (distToPlayer < 80000 && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.08 * level) {
+        if (distToPlayer < 80000 && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.18 * level) {
             this.currentPlan = 'kill';
-            ai.aimAngle += (Math.random() - 0.5) * 0.5;
+            ai.aimAngle += (Math.random() - 0.5) * 0.35;
             this.setKillDirection(ai, target);
             this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_CLOSE;
+            return;
+        }
+
+        if (distToPlayer < 150000 && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.12 * level) {
+            this.currentPlan = 'kill';
+            ai.aimAngle += (Math.random() - 0.5) * 0.3;
+            this.setKillDirection(ai, target);
+            this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_CLOSE * 1.2;
             return;
         }
 
@@ -1969,7 +1976,7 @@ class AIController {
             return;
         }
 
-        if (Math.random() < 0.02 * level && this.killCooldown <= 0 && canUseUltimate && distToPlayer < 250000) {
+        if (Math.random() < 0.08 * level && this.killCooldown <= 0 && canUseUltimate && distToPlayer < 250000) {
             this.currentPlan = 'kill';
             this.setKillDirection(ai, target);
             this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_FAR;
