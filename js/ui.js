@@ -3,6 +3,7 @@ class UI {
         this.game = game;
         this.selectedPlayerCount = 3;
         this.selectedAICount = 3;
+        this.selectedGameMode = 'normal';
         this.currentTab = 'create';
         this.initElements();
         this.initEvents();
@@ -53,6 +54,14 @@ class UI {
                 this.playUISound();
                 this.vibrate(10);
                 this.setAICount(parseInt(btn.dataset.count));
+            });
+        });
+
+        document.querySelectorAll('.game-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.playUISound();
+                this.vibrate(10);
+                this.setGameMode(btn.dataset.mode);
             });
         });
 
@@ -177,10 +186,18 @@ class UI {
         });
     }
 
+    setGameMode(mode) {
+        this.selectedGameMode = mode;
+        document.querySelectorAll('.game-mode-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+    }
+
     startAIGame() {
         this.aiModeScreen.classList.add('hidden');
         this.game.gameMode = 'ai';
         this.game.aiPlayerCount = this.selectedAICount;
+        this.game.endlessMode = (this.selectedGameMode === 'endless');
         this.game.startGame();
     }
 

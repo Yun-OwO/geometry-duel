@@ -14,6 +14,11 @@ class Game {
         this.aiPlayerCount = 3;
         this.rng = null;
 
+        this.endlessMode = false;
+        this.endlessRound = 0;
+        this.endlessWins = 0;
+        this.aiGenes = this.loadAIGenes();
+
         this.setupCanvas();
         this.initInput();
         this.initAudio();
@@ -22,6 +27,62 @@ class Game {
         window.addEventListener('resize', () => this.resize());
         this.resize();
         this.start();
+    }
+
+    loadAIGenes() {
+        try {
+            const saved = localStorage.getItem('geometryDuelAIGenes');
+            if (saved) {
+                const data = JSON.parse(saved);
+                return {
+                    genes: data.genes || { ...AIGeneDefaults },
+                    generation: data.generation || 0,
+                    wins: data.wins || 0,
+                };
+            }
+        } catch (e) {}
+        return {
+            genes: { ...AIGeneDefaults },
+            generation: 0,
+            wins: 0,
+        };
+    }
+
+    saveAIGenes() {
+        try {
+            localStorage.setItem('geometryDuelAIGenes', JSON.stringify(this.aiGenes));
+        } catch (e) {}
+    }
+
+    mutateGene(value, range) {
+        const isBeneficial = Math.random() < AIMutationConfig.beneficialChance;
+        const strength = isBeneficial ? AIMutationConfig.mutationStrength : AIMutationConfig.harmfulStrength;
+        const direction = isBeneficial ? 1 : -1;
+        const mutation = (Math.random() * strength) * direction;
+        let newValue = value + mutation;
+        newValue = Math.max(range.min, Math.min(range.max, newValue));
+        return newValue;
+    }
+
+    evolveAI() {
+        const oldGenes = this.aiGenes.genes;
+        const newGenes = {};
+        for (const key in AIGeneRanges) {
+            newGenes[key] = this.mutateGene(oldGenes[key], AIGeneRanges[key]);
+        }
+        this.aiGenes.genes = newGenes;
+        this.aiGenes.generation++;
+        this.aiGenes.wins++;
+        this.saveAIGenes();
+    }
+
+    resetAIGenes() {
+        this.aiGenes = {
+            genes: { ...AIGeneDefaults },
+            generation: 0,
+            wins: 0,
+        };
+        this.saveAIGenes();
     }
 
     setupCanvas() {
@@ -336,7 +397,8 @@ class Game {
             this.players.push(player);
 
             if (this.gameMode === 'ai' && i > 0) {
-                this.aiControllers.push(new AIController(this, i));
+                const genes = this.endlessMode ? this.aiGenes.genes : null;
+                this.aiControllers.push(new AIController(this, i, genes));
             }
         }
 
@@ -421,6 +483,10 @@ class Game {
                 return;
             }
         } else {
+            if (!this.endlessMode || this.endlessRound === 0) {
+                this.endlessRound = 1;
+                this.endlessWins = 0;
+            }
             this.initEntities(this.aiPlayerCount);
         }
 
@@ -517,6 +583,16 @@ class Game {
         this.state = GameState.GAME_OVER;
         this.gameOverTransition = 0;
         this.gameOverTextIn = 0;
+
+        if (this.endlessMode) {
+            if (this.winnerId === 0) {
+                this.endlessWins++;
+                this.endlessRound++;
+            } else {
+                this.evolveAI();
+                this.endlessRound++;
+            }
+        }
     }
 
     update(dt) {
@@ -1067,11 +1143,11 @@ class Game {
                     const titleSize = minDim * 0.09;
                     const btnW = minDim * 0.5;
                     const btnH = minDim * 0.09;
-                    const titleYOffset = (1 - easeText) * minDim * 0.1;
+                    const titleYOffset = this.endlessMode ? (1 - easeText) * minDim * 0.06 : (1 - easeText) * minDim * 0.1;
                     const btnYOffset = (1 - easeText) * minDim * 0.06;
                     const titleScale = 0.7 + easeText * 0.3;
-                    const titleY = h / 2 - minDim * 0.08 + titleYOffset;
-                    const btnY = h / 2 + minDim * 0.05 + btnYOffset;
+                    const titleY = h / 2 - (this.endlessMode ? minDim * 0.06 : minDim * 0.08) + titleYOffset;
+                    const btnY = h / 2 + (this.endlessMode ? minDim * 0.08 : minDim * 0.05) + btnYOffset;
 
                     ctx.globalAlpha = easeText;
 
@@ -1085,6 +1161,22 @@ class Game {
                     ctx.fillText(this.winnerId === 0 ? '胜 利' : '失 败', 0, 0);
                     ctx.restore();
 
+                    if (this.endlessMode && easeText > 0.5) {
+                        ctx.globalAlpha = easeText;
+                        ctx.font = `${minDim * 0.04}px monospace`;
+                        ctx.fillStyle = '#000';
+                        ctx.textAlign = 'center';
+
+                        const infoY = titleY + titleSize * 0.7;
+                        ctx.fillText(`回合 ${this.endlessRound} · 胜利 ${this.endlessWins} · AI代数 ${this.aiGenes.generation}`, w / 2, infoY);
+
+                        const geneY = infoY + minDim * 0.045;
+                        const genes = this.aiGenes.genes;
+                        const geneText = `强度 ${(genes.level * 100).toFixed(0)}% · 瞄准 ${(genes.aimAccuracy * 100).toFixed(0)}% · 闪避 ${(genes.evasionAbility * 100).toFixed(0)}%`;
+                        ctx.font = `${minDim * 0.03}px monospace`;
+                        ctx.fillText(geneText, w / 2, geneY);
+                    }
+
                     ctx.globalAlpha = easeText * 0.15;
                     ctx.fillStyle = '#000';
                     ctx.fillRect(w / 2 - btnW / 2, btnY - btnH / 2, btnW, btnH);
@@ -1094,7 +1186,7 @@ class Game {
                     ctx.fillStyle = '#000';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(isTouch ? '点击重新开始' : '按 R 重新开始', w / 2, btnY);
+                    ctx.fillText(isTouch ? '点击继续' : '按 R 继续', w / 2, btnY);
                 }
             }
         }
@@ -1230,16 +1322,46 @@ class Player {
 
         this.aimAngle += input.moveX * CONFIG.AIM_SPEED * dt;
 
-        const enemy = this.getNearestEnemy();
-        if (enemy) {
-            const toEnemy = Math.atan2(enemy.y - this.y, enemy.x - this.x);
-            let diff = toEnemy - this.aimAngle;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            const chargeRatio = Math.min(this.chargeTime / CONFIG.ULTIMATE_CHARGE_TIME, 1);
-            const boost = 1 + chargeRatio * (CONFIG.AIM_ASSIST_CHARGE_BOOST - 1);
-            const aimStrength = this.isPlayer ? 1 : 0.6;
-            this.aimAngle += diff * CONFIG.AIM_ASSIST_STRENGTH * boost * aimStrength * dt * 10;
+        if (this.isPlayer) {
+            const stunnedEnemy = this.getNearestStunnedEnemy();
+            if (stunnedEnemy) {
+                const toEnemy = Math.atan2(stunnedEnemy.y - this.y, stunnedEnemy.x - this.x);
+                let diff = toEnemy - this.aimAngle;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+
+                const chargeRatio = Math.min(this.chargeTime / CONFIG.ULTIMATE_CHARGE_TIME, 1);
+                const boost = 1 + chargeRatio * (CONFIG.AIM_ASSIST_CHARGE_BOOST - 1);
+                const stunTrackingStrength = 3.5;
+                const maxTrackRange = Math.PI * 0.6;
+
+                if (Math.abs(diff) < maxTrackRange) {
+                    this.aimAngle += diff * stunTrackingStrength * boost * dt;
+                }
+            } else {
+                const enemy = this.getNearestEnemy();
+                if (enemy) {
+                    const toEnemy = Math.atan2(enemy.y - this.y, enemy.x - this.x);
+                    let diff = toEnemy - this.aimAngle;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    const chargeRatio = Math.min(this.chargeTime / CONFIG.ULTIMATE_CHARGE_TIME, 1);
+                    const boost = 1 + chargeRatio * (CONFIG.AIM_ASSIST_CHARGE_BOOST - 1);
+                    this.aimAngle += diff * CONFIG.AIM_ASSIST_STRENGTH * boost * dt * 10;
+                }
+            }
+        } else {
+            const enemy = this.getNearestEnemy();
+            if (enemy) {
+                const toEnemy = Math.atan2(enemy.y - this.y, enemy.x - this.x);
+                let diff = toEnemy - this.aimAngle;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                const chargeRatio = Math.min(this.chargeTime / CONFIG.ULTIMATE_CHARGE_TIME, 1);
+                const boost = 1 + chargeRatio * (CONFIG.AIM_ASSIST_CHARGE_BOOST - 1);
+                const aimStrength = 0.6;
+                this.aimAngle += diff * CONFIG.AIM_ASSIST_STRENGTH * boost * aimStrength * dt * 10;
+            }
         }
 
         this.chargeTime += dt;
@@ -1311,6 +1433,22 @@ class Player {
         let minDist = Infinity;
         for (const p of this.game.players) {
             if (p.id === this.id || !p.alive) continue;
+            const dx = p.x - this.x;
+            const dy = p.y - this.y;
+            const dist = dx * dx + dy * dy;
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = p;
+            }
+        }
+        return nearest;
+    }
+
+    getNearestStunnedEnemy() {
+        let nearest = null;
+        let minDist = Infinity;
+        for (const p of this.game.players) {
+            if (p.id === this.id || !p.alive || p.stunTime <= 0) continue;
             const dx = p.x - this.x;
             const dy = p.y - this.y;
             const dist = dx * dx + dy * dy;
@@ -1800,7 +1938,7 @@ class Particle {
 }
 
 class AIController {
-    constructor(game, aiId) {
+    constructor(game, aiId, genes = null) {
         this.game = game;
         this.aiId = aiId;
         this.currentPlan = 'move';
@@ -1808,6 +1946,27 @@ class AIController {
         this.verticalMove = 0;
         this.killCooldown = 0;
         this.planTimer = 0;
+        this.genes = genes || { ...AIGeneDefaults };
+    }
+
+    getEffectiveLevel() {
+        return this.genes.level;
+    }
+
+    getAimAccuracy() {
+        return this.genes.aimAccuracy;
+    }
+
+    getUltimateAggressiveness() {
+        return this.genes.ultimateAggressiveness;
+    }
+
+    getEvasionAbility() {
+        return this.genes.evasionAbility;
+    }
+
+    getReactionSpeed() {
+        return this.genes.reactionSpeed;
     }
 
     getNearestEnemy(ai) {
@@ -1894,13 +2053,17 @@ class AIController {
 
     updatePlan(ai, dt) {
         this.planTimer += dt;
-        if (this.planTimer < CONFIG.AI_PLAN_UPDATE_INTERVAL) return;
+        const updateInterval = CONFIG.AI_PLAN_UPDATE_INTERVAL / this.getReactionSpeed();
+        if (this.planTimer < updateInterval) return;
         this.planTimer = 0;
 
         const target = this.getNearestEnemy(ai);
         if (!target) return;
 
-        const level = CONFIG.AI_LEVEL;
+        const level = this.getEffectiveLevel();
+        const ultAggro = this.getUltimateAggressiveness();
+        const aimAcc = this.getAimAccuracy();
+        const evasion = this.getEvasionAbility();
         const half = CONFIG.LOGICAL_SIZE / 2;
         const canUseUltimate = ai.normalShotCount >= CONFIG.AI_ULTIMATE_MIN_JABS;
 
@@ -1930,13 +2093,14 @@ class AIController {
 
         if (target.state === PlayerState.STUN && this.killCooldown <= 0 && canUseUltimate) {
             this.currentPlan = 'kill';
-            ai.aimAngle += (Math.random() - 0.5) * 0.3;
+            ai.aimAngle += (Math.random() - 0.5) * 0.3 * (1 - aimAcc);
             this.setKillDirection(ai, target);
             this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_STUN;
             return;
         }
 
-        if (minDist < 40000 && nearestArrow) {
+        const evasionThreshold = 60000 * (1 - evasion * 0.5);
+        if (minDist < evasionThreshold && nearestArrow) {
             const bulletAngle = nearestArrow.angle;
             const playerAngle = Math.atan2(ai.y - nearestArrow.y, ai.x - nearestArrow.x);
             let escapeAngle = bulletAngle;
@@ -1954,17 +2118,17 @@ class AIController {
 
         const distToPlayer = this.distPow2(ai, target);
 
-        if (distToPlayer < 80000 && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.18 * level) {
+        if (distToPlayer < 80000 && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.18 * ultAggro) {
             this.currentPlan = 'kill';
-            ai.aimAngle += (Math.random() - 0.5) * 0.35;
+            ai.aimAngle += (Math.random() - 0.5) * 0.35 * (1 - aimAcc);
             this.setKillDirection(ai, target);
             this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_CLOSE;
             return;
         }
 
-        if (distToPlayer < 150000 && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.12 * level) {
+        if (distToPlayer < 150000 && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.12 * ultAggro) {
             this.currentPlan = 'kill';
-            ai.aimAngle += (Math.random() - 0.5) * 0.3;
+            ai.aimAngle += (Math.random() - 0.5) * 0.3 * (1 - aimAcc);
             this.setKillDirection(ai, target);
             this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_CLOSE * 1.2;
             return;

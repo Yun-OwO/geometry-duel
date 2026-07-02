@@ -76,3 +76,25 @@ const PlayerState = {
     STUN: 3,
     DEAD: 4,
 };
+
+const AIGeneDefaults = {
+    level: 0.3,
+    aimAccuracy: 0.5,
+    reactionSpeed: 0.4,
+    ultimateAggressiveness: 0.3,
+    evasionAbility: 0.4,
+};
+
+const AIGeneRanges = {
+    level: { min: 0.1, max: 1.0 },
+    aimAccuracy: { min: 0.2, max: 1.0 },
+    reactionSpeed: { min: 0.2, max: 1.0 },
+    ultimateAggressiveness: { min: 0.1, max: 1.0 },
+    evasionAbility: { min: 0.2, max: 1.0 },
+};
+
+const AIMutationConfig = {
+    beneficialChance: 0.7,
+    mutationStrength: 0.15,
+    harmfulStrength: 0.08,
+};
