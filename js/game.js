@@ -585,11 +585,11 @@ class Game {
         this.gameOverTextIn = 0;
 
         if (this.endlessMode) {
+            this.endlessRound++;
             if (this.winnerId === 0) {
                 this.endlessWins++;
+                this.evolveAI();
             }
-            this.endlessRound++;
-            this.evolveAI();
         }
     }
 
@@ -1166,13 +1166,14 @@ class Game {
                         ctx.textAlign = 'center';
 
                         const infoY = titleY + titleSize * 0.7;
-                        ctx.fillText(`回合 ${this.endlessRound} · 胜利 ${this.endlessWins} · AI代数 ${this.aiGenes.generation}`, w / 2, infoY);
+                        ctx.fillText(`回合 ${this.endlessRound} · 胜利 ${this.endlessWins}`, w / 2, infoY);
 
-                        const geneY = infoY + minDim * 0.045;
                         const genes = this.aiGenes.genes;
-                        const geneText = `强度 ${(genes.level * 100).toFixed(0)}% · 瞄准 ${(genes.aimAccuracy * 100).toFixed(0)}% · 闪避 ${(genes.evasionAbility * 100).toFixed(0)}%`;
-                        ctx.font = `${minDim * 0.03}px monospace`;
-                        ctx.fillText(geneText, w / 2, geneY);
+                        const avgScore = (genes.level + genes.aimAccuracy + genes.reactionSpeed + genes.ultimateAggressiveness + genes.evasionAbility) / 5;
+                        const scoreText = `AI能力评分: ${(avgScore * 100).toFixed(0)}%`;
+                        const scoreY = infoY + minDim * 0.045;
+                        ctx.font = `${minDim * 0.035}px monospace`;
+                        ctx.fillText(scoreText, w / 2, scoreY);
                     }
 
                     ctx.globalAlpha = easeText * 0.15;
