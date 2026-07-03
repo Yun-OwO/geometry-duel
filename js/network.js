@@ -7,7 +7,7 @@ const NETWORK_CONFIG = {
     ],
     INPUT_BUFFER_SIZE: 3,
     FRAME_DELAY: 2,
-    POLL_INTERVAL: 1000,
+    POLL_INTERVAL: 500,
 };
 
 class DeterministicRandom {
@@ -98,9 +98,14 @@ class FrameSync {
     canAdvance() {
         if (this.frame < NETWORK_CONFIG.FRAME_DELAY) return false;
         const targetFrame = this.frame;
-        if (!this.remoteFrames.has(targetFrame)) return false;
         const frameInputs = this.remoteFrames.get(targetFrame);
-        return frameInputs.size >= this.playerCount - 1;
+        // 如果没有远程连接，只使用本地输入推进
+        const connectedRemotes = Network.dataChannels.size;
+        if (connectedRemotes === 0) {
+            return true;
+        }
+        if (!frameInputs) return false;
+        return frameInputs.size >= connectedRemotes;
     }
 
     getInputForFrame(frame, playerId) {
@@ -274,6 +279,15 @@ class NetworkManager {
                 if (this.knownPlayers.length !== oldLen && this.onPlayerJoin) {
                     this.onPlayerJoin(this.knownPlayers);
                 }
+
+                // 房主主动连接新玩家
+                if (this.isHost) {
+                    for (const p of this.knownPlayers) {
+                        if (p.id !== this.playerId && !this.connections.has(p.id)) {
+                            this.connectToPlayer(p.id);
+                        }
+                    }
+                }
             }
 
             if (data.signals && data.signals.length > 0) {
@@ -350,6 +364,12 @@ class NetworkManager {
     }
 
     async handleSignal(fromId, data) {
+        // 通过信令服务器收到游戏开始信号
+        if (data.type === 'gamestart') {
+            this.startGameRemote(data.seed, data.playerCount);
+            return;
+        }
+
         let pc = this.connections.get(fromId);
         if (!pc && !this.isHost) {
             pc = await this.connectToPlayer(fromId);
@@ -402,11 +422,23 @@ class NetworkManager {
         this.frameSync = new FrameSync(null, this.maxPlayers, this.playerId);
         this.frameSync.start();
 
+        // 通过WebRTC广播
         this.broadcast({
             type: 'gamestart',
             seed,
             playerCount: this.maxPlayers,
         });
+
+        // 同时通过信令服务器发送（作为fallback，防止WebRTC未连接）
+        for (const p of this.knownPlayers) {
+            if (p.id !== this.playerId) {
+                this.sendSignal(p.id, {
+                    type: 'gamestart',
+                    seed,
+                    playerCount: this.maxPlayers,
+                });
+            }
+        }
 
         return { seed, playerCount: this.maxPlayers };
     }
