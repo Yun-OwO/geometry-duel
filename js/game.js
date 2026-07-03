@@ -2252,6 +2252,31 @@ class AIController {
         return this.genes.strategyMutation;
     }
 
+    getThreatInfo(ai) {
+        let nearbyCount = 0;
+        let stunnedEnemy = null;
+        let lowHpEnemy = null;
+        let minStunDist = Infinity;
+        let minHpDist = Infinity;
+        const closeThreshold = 150000;
+        for (const p of this.game.players) {
+            if (p.id === ai.id || !p.alive || p.state === PlayerState.DEAD) continue;
+            const dx = p.x - ai.x;
+            const dy = p.y - ai.y;
+            const dist = dx * dx + dy * dy;
+            if (dist < closeThreshold) nearbyCount++;
+            if (p.stunTime > 0 && dist < minStunDist) {
+                minStunDist = dist;
+                stunnedEnemy = p;
+            }
+            if (p.state === PlayerState.STUN && dist < minHpDist) {
+                minHpDist = dist;
+                lowHpEnemy = p;
+            }
+        }
+        return { nearbyCount, stunnedEnemy, lowHpEnemy };
+    }
+
     getNearestEnemy(ai) {
         let nearest = null;
         let minDist = Infinity;
@@ -2340,8 +2365,18 @@ class AIController {
         if (this.planTimer < updateInterval) return;
         this.planTimer = 0;
 
-        const target = this.getNearestEnemy(ai);
+        let target = this.getNearestEnemy(ai);
         if (!target) return;
+
+        const threat = this.getThreatInfo(ai);
+        const playerCount = this.game.players.filter(p => p.alive && p.state !== PlayerState.DEAD).length;
+        const isMultiplayer = playerCount > 2;
+
+        if (isMultiplayer && threat.nearbyCount >= 2) {
+            if (threat.stunnedEnemy) {
+                target = threat.stunnedEnemy;
+            }
+        }
 
         const level = this.getEffectiveLevel();
         const ultAggro = this.getUltimateAggressiveness();
@@ -2396,7 +2431,7 @@ class AIController {
         }
 
         if (strategyMutation === 'turtle') {
-            if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.4) {
+            if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.25) {
                 this.horizontalMove = 0;
                 this.verticalMove = 0;
                 this.currentPlan = 'kill';
@@ -2427,7 +2462,7 @@ class AIController {
             } else {
                 this.horizontalMove = 0;
                 this.verticalMove = 0;
-                if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.25) {
+                if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.15) {
                     this.currentPlan = 'kill';
                     this.setKillDirection(ai, target);
                     this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_CLOSE;
@@ -2448,7 +2483,7 @@ class AIController {
                 this.horizontalMove = 0;
                 this.verticalMove = 0;
             }
-            this.currentPlan = Math.random() < 0.5 ? 'move' : 'jab';
+            this.currentPlan = Math.random() < 0.15 ? 'move' : 'jab';
             return;
         }
 
@@ -2462,7 +2497,16 @@ class AIController {
             const tx = predictedX + 80 * Math.cos(escapeAngle);
             const ty = predictedY + 80 * Math.sin(escapeAngle);
             this.setMoveDirectionToPoint(ai, tx, ty, 0);
-            this.currentPlan = Math.random() < 0.6 ? 'move' : 'jab';
+            this.currentPlan = Math.random() < 0.2 ? 'move' : 'jab';
+            return;
+        }
+
+        if (isMultiplayer && threat.nearbyCount >= 2 && !threat.stunnedEnemy && this.killCooldown > 0) {
+            const safeAngle = Math.atan2(ai.y - target.y, ai.x - target.x);
+            const tx = ai.x + 120 * Math.cos(safeAngle);
+            const ty = ai.y + 120 * Math.sin(safeAngle);
+            this.setMoveDirectionToPoint(ai, tx, ty, 0);
+            this.currentPlan = Math.random() < 0.2 ? 'move' : 'jab';
             return;
         }
 
@@ -2497,7 +2541,7 @@ class AIController {
             const tx = ai.x + 100 * Math.cos(escapeAngle);
             const ty = ai.y + 100 * Math.sin(escapeAngle);
             this.setMoveDirectionToPoint(ai, tx, ty, 0);
-            this.currentPlan = strategyMutation === 'no_attack' ? 'move' : (Math.random() < 0.7 ? 'move' : 'jab');
+            this.currentPlan = strategyMutation === 'no_attack' ? 'move' : (Math.random() < 0.15 ? 'move' : 'jab');
             return;
         }
 
@@ -2507,7 +2551,7 @@ class AIController {
         const farDist = movementStyle === 'defensive' ? 200000 : 150000;
         const actualUltAggro = strategyMutation === 'berserker' ? ultAggro * 2 : ultAggro;
 
-        if (distToPlayer < closeDist && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.18 * actualUltAggro) {
+        if (distToPlayer < closeDist && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.12 * actualUltAggro) {
             this.currentPlan = 'kill';
             ai.aimAngle += (Math.random() - 0.5) * 0.35 * (1 - aimAcc);
             this.setKillDirection(ai, target);
@@ -2515,7 +2559,7 @@ class AIController {
             return;
         }
 
-        if (distToPlayer < farDist && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.12 * actualUltAggro) {
+        if (distToPlayer < farDist && this.killCooldown <= 0 && canUseUltimate && Math.random() < 0.08 * actualUltAggro) {
             this.currentPlan = 'kill';
             ai.aimAngle += (Math.random() - 0.5) * 0.3 * (1 - aimAcc);
             this.setKillDirection(ai, target);
@@ -2525,13 +2569,13 @@ class AIController {
 
         if (strategyMutation === 'chase_only') {
             this.setMoveDirection(ai, target, 'aggressive');
-            this.currentPlan = Math.random() < 0.3 ? 'move' : 'jab';
+            this.currentPlan = Math.random() < 0.12 ? 'move' : 'jab';
             return;
         }
 
         if (strategyMutation === 'only_ultimate') {
             this.setMoveDirection(ai, target, movementStyle);
-            if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.1 * ultAggro) {
+            if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.06 * ultAggro) {
                 this.currentPlan = 'kill';
                 this.setKillDirection(ai, target);
                 this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_CLOSE;
@@ -2543,19 +2587,19 @@ class AIController {
 
         if (distToPlayer < farDist) {
             this.setMoveDirection(ai, target, movementStyle, strategyMutation);
-            const attackChance = strategyMutation === 'berserker' ? 0.7 : 0.5;
+            const attackChance = strategyMutation === 'berserker' ? 0.2 : 0.15;
             this.currentPlan = strategyMutation === 'no_attack' ? 'move' : (Math.random() < attackChance ? 'move' : 'jab');
             return;
         }
 
-        if (Math.random() < 0.08 * level && this.killCooldown <= 0 && canUseUltimate && distToPlayer < 250000) {
+        if (Math.random() < 0.05 * level && this.killCooldown <= 0 && canUseUltimate && distToPlayer < 250000) {
             this.currentPlan = 'kill';
             this.setKillDirection(ai, target);
             this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_FAR;
             return;
         }
 
-        if (Math.random() < 0.3) {
+        if (Math.random() < 0.15) {
             this.currentPlan = 'move';
         } else {
             this.currentPlan = strategyMutation === 'no_attack' ? 'move' : 'jab';
