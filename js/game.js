@@ -304,38 +304,34 @@ class Game {
         }
 
         const positions = {};
-        const nodeGap = 95;
-        const leftPad = 70;
-        const rightPad = 70;
-        const topPad = 45;
-        const bottomPad = 45;
-        const colSpacing = 220;
-        const logicWidth = leftPad + 3 * colSpacing + rightPad;
-        const logicHeight = topPad + (maxCount - 1) * nodeGap + bottomPad;
+        const nodeGap = 110;
+        const leftPad = 80;
+        const rightPad = 80;
+        const topPad = 70;
+        const bottomPad = 70;
+        const rowSpacing = 150;
+        const logicWidth = leftPad + (maxCount - 1) * nodeGap + rightPad;
+        const logicHeight = topPad + 3 * rowSpacing + bottomPad;
 
         for (let s = 0; s < 4; s++) {
             const stageNodes = nodesByStage[s];
             const count = stageNodes.length;
-            const x = leftPad + s * colSpacing;
+            const y = topPad + s * rowSpacing;
 
             if (count === 0) continue;
 
-            const totalNodesH = (count - 1) * nodeGap;
-            const startY = topPad + (logicHeight - topPad - bottomPad - totalNodesH) / 2;
+            const totalNodesW = (count - 1) * nodeGap;
+            const startX = leftPad + (logicWidth - leftPad - rightPad - totalNodesW) / 2;
             for (let i = 0; i < count; i++) {
-                const y = startY + i * nodeGap;
+                const x = startX + i * nodeGap;
                 positions[stageNodes[i].id] = { x, y };
             }
         }
 
-        let initZoom = 1;
-        let initCenter = [logicWidth / 2, logicHeight / 2];
-        if (viewW && viewH) {
-            const scaleX = viewW / logicWidth;
-            const scaleY = viewH / logicHeight;
-            initZoom = Math.min(scaleX, scaleY) * 0.92;
-            initCenter = [logicWidth / 2, logicHeight / 2];
-        }
+        const scaleX = viewW / logicWidth;
+        const scaleY = viewH / logicHeight;
+        const initZoom = Math.min(scaleX, scaleY) * 0.92;
+        const initCenter = [logicWidth / 2, logicHeight / 2];
 
         const data = [];
         for (const node of branchNodes) {
@@ -349,27 +345,25 @@ class Game {
                 itemStyle = {
                     color: stageColor,
                     borderColor: '#fff',
-                    borderWidth: 2.5,
-                    shadowBlur: 18,
+                    borderWidth: 2,
+                    shadowBlur: 14,
                     shadowColor: stageColor,
                 };
             } else if (isAvailable) {
                 itemStyle = {
                     color: 'rgba(20, 20, 40, 0.9)',
                     borderColor: stageColor,
-                    borderWidth: 2.5,
+                    borderWidth: 2,
                 };
             } else {
                 itemStyle = {
                     color: 'rgba(20, 20, 40, 0.6)',
-                    borderColor: 'rgba(100, 100, 120, 0.6)',
+                    borderColor: 'rgba(100, 100, 120, 0.5)',
                     borderWidth: 1.5,
-                    opacity: 0.7,
                 };
             }
 
             const labelColor = isUnlocked ? '#fff' : (isAvailable ? stageColor : 'rgba(140, 140, 160, 0.7)');
-            const labelOpacity = isUnlocked ? 1 : (isAvailable ? 1 : 0.5);
 
             data.push({
                 id: node.id,
@@ -383,7 +377,6 @@ class Game {
                     position: 'bottom',
                     fontSize: 11,
                     color: labelColor,
-                    opacity: labelOpacity,
                     fontWeight: isUnlocked ? 'bold' : 'normal',
                     distance: 4,
                 },
@@ -407,17 +400,17 @@ class Game {
 
                 let lineColor;
                 let lineOpacity;
-                let lineWidth = 2;
+                let lineWidth = 1.5;
                 if (preUnlocked && nodeUnlocked) {
                     lineColor = preStageColor;
-                    lineOpacity = 0.85;
-                    lineWidth = 2.5;
+                    lineOpacity = 0.7;
+                    lineWidth = 2;
                 } else if (preUnlocked || nodeUnlocked) {
                     lineColor = preStageColor;
-                    lineOpacity = 0.5;
+                    lineOpacity = 0.4;
                 } else {
-                    lineColor = 'rgba(100, 100, 130, 0.6)';
-                    lineOpacity = 0.5;
+                    lineColor = 'rgba(100, 100, 130, 0.5)';
+                    lineOpacity = 0.35;
                 }
 
                 links.push({
@@ -427,7 +420,7 @@ class Game {
                         color: lineColor,
                         opacity: lineOpacity,
                         width: lineWidth,
-                        curveness: 0.2,
+                        curveness: 0.15,
                     },
                 });
             }
@@ -435,7 +428,7 @@ class Game {
 
         return {
             tooltip: { show: false },
-            animationDuration: 700,
+            animationDuration: 600,
             animationEasingUpdate: 'quinticInOut',
             series: [{
                 type: 'graph',
@@ -443,13 +436,13 @@ class Game {
                 roam: true,
                 zoom: initZoom,
                 center: initCenter,
-                scaleLimit: { min: 0.3, max: 2.5 },
-                nodeScaleRatio: 1,
+                scaleLimit: { min: 0.4, max: 2 },
+                nodeScaleRatio: 0.6,
                 symbol: 'circle',
-                symbolSize: 36,
+                symbolSize: 34,
                 edgeSymbol: ['none', 'arrow'],
-                edgeSymbolSize: 8,
-                emphasis: { focus: 'adjacency', scale: 1.15 },
+                edgeSymbolSize: 7,
+                emphasis: { focus: 'adjacency', scale: 1.1 },
                 data: data,
                 links: links,
             }]
