@@ -1,4 +1,4 @@
-// Cloudflare Worker 信令服务器
+// Cloudflare Worker 信令服务器 + 静态资源服务
 // 部署：wrangler deploy
 
 const ROOM_TTL = 300; // 5分钟
@@ -45,31 +45,41 @@ export default {
         const url = new URL(request.url);
         const path = url.pathname;
 
-        if (path === '/api/room/create' && request.method === 'POST') {
-            return this.createRoom(request, env);
+        // API 路由
+        if (path.startsWith('/api/')) {
+            if (path === '/api/room/create' && request.method === 'POST') {
+                return this.createRoom(request, env);
+            }
+
+            if (path.startsWith('/api/room/') && path.endsWith('/join') && request.method === 'POST') {
+                const code = path.split('/')[3];
+                return this.joinRoom(code, request, env);
+            }
+
+            if (path.startsWith('/api/room/') && path.endsWith('/signal') && request.method === 'POST') {
+                const code = path.split('/')[3];
+                return this.sendSignal(code, request, env);
+            }
+
+            if (path.startsWith('/api/room/') && path.endsWith('/poll') && request.method === 'GET') {
+                const code = path.split('/')[3];
+                return this.pollSignals(code, request, env);
+            }
+
+            if (path.startsWith('/api/room/') && path.endsWith('/leave') && request.method === 'POST') {
+                const code = path.split('/')[3];
+                return this.leaveRoom(code, request, env);
+            }
+
+            return jsonResponse({ error: 'Not found' }, 404);
         }
 
-        if (path.startsWith('/api/room/') && path.endsWith('/join') && request.method === 'POST') {
-            const code = path.split('/')[3];
-            return this.joinRoom(code, request, env);
+        // 静态资源由 ASSETS 绑定处理
+        if (env.ASSETS) {
+            return env.ASSETS.fetch(request);
         }
 
-        if (path.startsWith('/api/room/') && path.endsWith('/signal') && request.method === 'POST') {
-            const code = path.split('/')[3];
-            return this.sendSignal(code, request, env);
-        }
-
-        if (path.startsWith('/api/room/') && path.endsWith('/poll') && request.method === 'GET') {
-            const code = path.split('/')[3];
-            return this.pollSignals(code, request, env);
-        }
-
-        if (path.startsWith('/api/room/') && path.endsWith('/leave') && request.method === 'POST') {
-            const code = path.split('/')[3];
-            return this.leaveRoom(code, request, env);
-        }
-
-        return jsonResponse({ error: 'Not found' }, 404);
+        return new Response('Not found', { status: 404 });
     },
 
     async createRoom(request, env) {

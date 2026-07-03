@@ -1,0 +1,9 @@
+worker/
+node_modules/
+.git/
+*.md
+TODO.md
+PRD.md
+TECH_DESIGN.md
+README.md
+.geometry-duel-apk/
