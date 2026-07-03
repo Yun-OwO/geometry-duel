@@ -53,7 +53,8 @@ class FrameSync {
     }
 
     addLocalInput(input) {
-        const frame = this.frame + NETWORK_CONFIG.FRAME_DELAY;
+        const delay = Network.dataChannels.size > 0 ? NETWORK_CONFIG.FRAME_DELAY : 0;
+        const frame = this.frame + delay;
         this.inputs.set(frame, { ...input, local: true });
         this.sendInput(frame, input);
         return frame;
@@ -96,14 +97,14 @@ class FrameSync {
     }
 
     canAdvance() {
+        const connectedRemotes = Network.dataChannels.size;
+        if (connectedRemotes === 0) {
+            const targetFrame = this.frame;
+            return this.inputs.has(targetFrame);
+        }
         if (this.frame < NETWORK_CONFIG.FRAME_DELAY) return false;
         const targetFrame = this.frame;
         const frameInputs = this.remoteFrames.get(targetFrame);
-        // 如果没有远程连接，只使用本地输入推进
-        const connectedRemotes = Network.dataChannels.size;
-        if (connectedRemotes === 0) {
-            return true;
-        }
         if (!frameInputs) return false;
         return frameInputs.size >= connectedRemotes;
     }
