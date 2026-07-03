@@ -7,3 +7,8 @@ PRD.md
 TECH_DESIGN.md
 README.md
 .geometry-duel-apk/
+test-framesync.js
+test-puppeteer.js
+local-server.js
+test-loader.html
+p2p-test.html

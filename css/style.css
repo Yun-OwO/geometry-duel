@@ -311,10 +311,26 @@ html, body {
 .count-selector {
     display: flex;
     gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+.count-selector::-webkit-scrollbar {
+    height: 4px;
+}
+
+.count-selector::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
 }
 
 .count-btn {
-    flex: 1;
+    flex: 1 0 auto;
+    min-width: 72px;
     background: transparent;
     border: 2px solid var(--border);
     color: var(--fg);
@@ -706,6 +722,8 @@ html, body {
     }
 
     .ai-count-btn {
+        flex: 1 0 auto;
+        min-width: 72px;
         padding: 14px 8px;
     }
 
@@ -715,5 +733,9 @@ html, body {
 
     .ai-count-btn .count-sub {
         font-size: 10px;
+    }
+
+    .count-selector {
+        padding-bottom: 6px;
     }
 }

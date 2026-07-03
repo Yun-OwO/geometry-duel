@@ -595,7 +595,6 @@ class Game {
 
     async startGame() {
         this.demoMode = false;
-        this.state = GameState.PLAYING;
 
         if (!this.endlessMode || this.endlessRound === 0) {
             this.aiGenes = {
@@ -615,6 +614,9 @@ class Game {
                 this.onlinePlayerCount = playerCount;
                 Network.frameSync.game = this;
                 this.initEntities(playerCount);
+                this.resetGame();
+                // 所有准备就绪后再进入 PLAYING 状态，避免 update() 在 frameSync 就绪前落入非在线分支
+                this.state = GameState.PLAYING;
             } else {
                 return;
             }
@@ -624,9 +626,9 @@ class Game {
                 this.endlessWins = 0;
             }
             this.initEntities(this.aiPlayerCount);
+            this.resetGame();
+            this.state = GameState.PLAYING;
         }
-
-        this.resetGame();
     }
 
     resetGame() {
@@ -804,6 +806,11 @@ class Game {
         const fs = Network.frameSync;
         const localInput = this.getPlayerInput();
         fs.addLocalInput(localInput);
+
+        // 诊断日志：每60帧输出一次进度，帮助确认在线同步正常工作
+        if (fs.frame > 0 && fs.frame % 60 === 0) {
+            console.log('%c[GAME] online frame=' + fs.frame + ' inputsCollected=' + fs.inputsCollected + ' stall=' + fs.stallCount + ' dc=' + Network.dataChannels.size, 'color:#a0f');
+        }
 
         while (fs.canAdvance()) {
             const frame = fs.frame;
