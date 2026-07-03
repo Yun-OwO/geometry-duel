@@ -281,6 +281,24 @@ class Game {
             }
         });
 
+        this.talentChart.on('click', (params) => {
+            if (params.dataType === 'node' && params.data.id) {
+                this._showGeneDetail(params.data.id);
+                this.playSound('lCharge');
+                this.vibrate(10);
+            }
+        });
+
+        const closeBtn = document.getElementById('gene-detail-close');
+        if (closeBtn && !closeBtn._hasListener) {
+            closeBtn._hasListener = true;
+            closeBtn.addEventListener('click', () => {
+                this._hideGeneDetail();
+                this.playSound('lCharge');
+                this.vibrate(8);
+            });
+        }
+
         const backBtn = document.getElementById('talent-tree-back');
         if (backBtn && !backBtn._hasListener) {
             backBtn._hasListener = true;
@@ -344,6 +362,8 @@ class Game {
         const branchNodes = getGeneNodesByBranch(branch);
         const unlockedSet = new Set(this.aiGenes.unlockedGenes || []);
         const currentPathId = this.aiGenes.currentPaths ? this.aiGenes.currentPaths[branch] : null;
+        const lastMutations = this.aiGenes.lastMutations || [];
+        const newlyUnlockedSet = new Set(lastMutations.map(m => m.gene));
         const branchColor = AIGeneTree.branches[branch].color;
 
         const stageColors = [
@@ -353,30 +373,80 @@ class Game {
             this._adjustColor(branchColor, 35),
         ];
 
+        const isOnCurrentPath = (nodeId) => {
+            if (!currentPathId) return false;
+            if (nodeId === currentPathId) return true;
+            let current = AIGeneTree.nodes[currentPathId];
+            while (current && current.stage > 0) {
+                const prereqs = current.prerequisites || [];
+                if (prereqs.includes(nodeId)) return true;
+                const parent = prereqs.length > 0 ? AIGeneTree.nodes[prereqs[0]] : null;
+                current = parent;
+            }
+            return false;
+        };
+
         const buildTreeNode = (nodeId) => {
             const node = AIGeneTree.nodes[nodeId];
             if (!node) return null;
 
             const isUnlocked = unlockedSet.has(nodeId);
             const isCurrentPath = nodeId === currentPathId;
+            const isNew = newlyUnlockedSet.has(nodeId);
+            const onPath = isOnCurrentPath(nodeId);
             const stageColor = stageColors[node.stage];
 
+            let symbolSize = 30;
             let itemStyle;
+            let labelStyle = {};
+
             if (isCurrentPath) {
+                symbolSize = 42;
                 itemStyle = {
-                    color: stageColor,
+                    color: {
+                        type: 'radial',
+                        x: 0.5,
+                        y: 0.5,
+                        r: 0.5,
+                        colorStops: [
+                            { offset: 0, color: '#fff' },
+                            { offset: 0.3, color: stageColor },
+                            { offset: 1, color: this._adjustColor(stageColor, -20) }
+                        ]
+                    },
                     borderColor: '#fff',
                     borderWidth: 3,
-                    shadowBlur: 18,
+                    shadowBlur: 28,
                     shadowColor: stageColor,
                 };
+                labelStyle = {
+                    fontWeight: 'bold',
+                    fontSize: 13,
+                    color: '#fff',
+                    textBorderColor: stageColor,
+                    textBorderWidth: 2,
+                };
             } else if (isUnlocked) {
+                symbolSize = onPath ? 36 : 32;
                 itemStyle = {
-                    color: stageColor,
-                    borderColor: 'rgba(255,255,255,0.7)',
-                    borderWidth: 2,
-                    shadowBlur: 8,
+                    color: {
+                        type: 'radial',
+                        x: 0.5,
+                        y: 0.5,
+                        r: 0.5,
+                        colorStops: [
+                            { offset: 0, color: this._adjustColor(stageColor, 30) },
+                            { offset: 1, color: stageColor }
+                        ]
+                    },
+                    borderColor: 'rgba(255,255,255,0.8)',
+                    borderWidth: onPath ? 2.5 : 2,
+                    shadowBlur: onPath ? 16 : 10,
                     shadowColor: stageColor,
+                };
+                labelStyle = {
+                    fontWeight: onPath ? '600' : 'normal',
+                    color: '#fff',
                 };
             } else {
                 itemStyle = {
@@ -384,25 +454,49 @@ class Game {
                     borderColor: 'rgba(90, 90, 110, 0.5)',
                     borderWidth: 1.5,
                 };
+                labelStyle = {
+                    color: 'rgba(130, 130, 150, 0.7)',
+                };
             }
 
-            const labelColor = isCurrentPath ? '#fff' : (isUnlocked ? '#fff' : 'rgba(130, 130, 150, 0.7)');
+            if (isNew && isUnlocked) {
+                itemStyle.shadowBlur = (itemStyle.shadowBlur || 10) + 12;
+                itemStyle.borderColor = '#fff';
+                itemStyle.borderWidth = 3;
+            }
+
             const children = getGeneChildren(nodeId);
+            const childNodes = children.map(c => buildTreeNode(c.id)).filter(c => c !== null);
+
+            childNodes.forEach(child => {
+                const childNode = AIGeneTree.nodes[child.id];
+                const childUnlocked = unlockedSet.has(child.id);
+                const childOnPath = isOnCurrentPath(child.id);
+                if (childUnlocked && onPath) {
+                    child.lineStyle = {
+                        color: branchColor,
+                        opacity: childOnPath ? 0.9 : 0.6,
+                        width: childOnPath ? 3 : 2,
+                        shadowBlur: childOnPath ? 8 : 4,
+                        shadowColor: branchColor,
+                    };
+                }
+            });
 
             return {
                 id: node.id,
-                name: node.name,
+                name: isNew && isUnlocked ? '✦ ' + node.name : node.name,
                 value: node.stage,
+                symbolSize: symbolSize,
                 itemStyle: itemStyle,
                 label: {
                     show: true,
                     position: 'bottom',
                     fontSize: 11,
-                    color: labelColor,
-                    fontWeight: isCurrentPath ? 'bold' : (isUnlocked ? 'normal' : 'normal'),
                     distance: 8,
+                    ...labelStyle,
                 },
-                children: children.map(c => buildTreeNode(c.id)).filter(c => c !== null),
+                children: childNodes,
             };
         };
 
@@ -427,12 +521,15 @@ class Game {
                 edgeForkPosition: '63%',
                 lineStyle: {
                     color: branchColor,
-                    opacity: 0.35,
-                    width: 2,
+                    opacity: 0.3,
+                    width: 1.5,
                     curveness: 0.5,
                 },
                 emphasis: {
                     focus: 'descendant',
+                    itemStyle: {
+                        shadowBlur: 20,
+                    },
                 },
                 leaves: {
                     label: {
@@ -525,6 +622,111 @@ class Game {
         const tooltip = document.getElementById('talent-tooltip');
         if (tooltip) {
             tooltip.classList.add('hidden');
+        }
+    }
+
+    _showGeneDetail(nodeId) {
+        const node = AIGeneTree.nodes[nodeId];
+        if (!node) return;
+
+        const panel = document.getElementById('gene-detail-panel');
+        const unlockedSet = new Set(this.aiGenes.unlockedGenes || []);
+        const currentPathId = this.aiGenes.currentPaths ? this.aiGenes.currentPaths[node.branch] : null;
+        const branchColor = AIGeneTree.branches[node.branch].color;
+        const branchName = AIGeneTree.branches[node.branch].name;
+
+        const isUnlocked = unlockedSet.has(nodeId);
+        const isCurrentPath = nodeId === currentPathId;
+
+        panel.querySelector('.gene-detail-name').textContent = node.name;
+        panel.querySelector('.gene-detail-name').style.color = isUnlocked ? branchColor : '#888';
+        panel.querySelector('.gene-detail-branch').textContent = `分类：${branchName}`;
+        panel.querySelector('.gene-detail-stage').textContent = `阶段 ${node.stage} · ${AIGeneTree.stages[node.stage].name}`;
+
+        const statusEl = panel.querySelector('.gene-detail-status');
+        if (isCurrentPath) {
+            statusEl.textContent = '◆ 当前进化路径';
+            statusEl.style.color = branchColor;
+            statusEl.style.background = branchColor + '20';
+        } else if (isUnlocked) {
+            statusEl.textContent = '● 已激活';
+            statusEl.style.color = branchColor;
+            statusEl.style.background = branchColor + '15';
+        } else {
+            statusEl.textContent = '◌ 未激活';
+            statusEl.style.color = '#666';
+            statusEl.style.background = 'rgba(255,255,255,0.05)';
+        }
+
+        panel.querySelector('.gene-detail-desc').textContent = node.desc;
+
+        const effectEl = panel.querySelector('.gene-detail-effect');
+        if (node.effect) {
+            let effectText = '';
+            if (node.effect.type === 'stat') {
+                const effectNames = {
+                    aimAccuracy: '瞄准精度',
+                    reactionSpeed: '反应速度',
+                    ultimateAggressiveness: '大招倾向',
+                    evasionAbility: '闪避能力',
+                    moveSpeed: '移动速度',
+                    bulletSpeed: '子弹速度',
+                    fireRate: '射速',
+                    damage: '伤害',
+                    defense: '防御',
+                    maxHp: '最大生命',
+                    level: 'AI等级',
+                };
+                const name = effectNames[node.effect.key] || node.effect.key;
+                if (typeof node.effect.value === 'number') {
+                    if (node.effect.value >= 0 && node.effect.value <= 2) {
+                        effectText = `${name}: ${(node.effect.value * 100).toFixed(0)}%`;
+                    } else {
+                        effectText = `${name}: ${node.effect.value}`;
+                    }
+                } else {
+                    effectText = `${name}: ${node.effect.value}`;
+                }
+            } else if (node.effect.type === 'ability') {
+                effectText = `特殊能力：${node.effect.name || node.effect.key}`;
+            } else if (node.effect.type === 'style') {
+                const styleNames = {
+                    aggressive: '激进型',
+                    defensive: '防守型',
+                    balanced: '均衡型',
+                    trickster: '战术型',
+                };
+                effectText = `战斗风格：${styleNames[node.effect.value] || node.effect.value}`;
+            } else {
+                effectText = node.desc;
+            }
+            effectEl.textContent = effectText;
+            effectEl.style.display = 'block';
+            panel.querySelector('.gene-detail-effect-title').style.display = 'block';
+        } else {
+            effectEl.style.display = 'none';
+            panel.querySelector('.gene-detail-effect-title').style.display = 'none';
+        }
+
+        const prereqEl = panel.querySelector('.gene-detail-prereq');
+        if (node.prerequisites && node.prerequisites.length > 0) {
+            const prereqNames = node.prerequisites.map(preId => {
+                const preNode = AIGeneTree.nodes[preId];
+                return preNode ? preNode.name : preId;
+            });
+            prereqEl.textContent = '前置基因：' + prereqNames.join('、');
+            prereqEl.style.display = 'block';
+        } else {
+            prereqEl.style.display = 'none';
+        }
+
+        panel.classList.remove('hidden');
+    }
+
+    _hideGeneDetail() {
+        const panel = document.getElementById('gene-detail-panel');
+        if (panel) {
+            panel.classList.add('hidden');
         }
     }
 
@@ -708,18 +910,29 @@ class Game {
                     this.vibrate(20);
                     continue;
                 }
-                // 检测"查看天赋谱"按钮（无尽模式）
+                // 检测"查看基因谱"按钮（无尽模式）
                 if (this.endlessMode) {
                     const talentBtnW = minDim * 0.4;
                     const talentBtnH = minDim * 0.065;
-                    // 天赋按钮位置（需与绘制位置匹配）
+                    // 基因谱按钮位置（需与绘制位置匹配）
                     const titleSize = minDim * 0.09;
                     const infoY = this.screenH / 2 - minDim * 0.06 - extraContent / 2 + titleSize * 0.7;
                     const scoreY = infoY + minDim * 0.045;
                     const talentProgressY = scoreY + minDim * 0.04;
                     const progressBarY = talentProgressY + minDim * 0.02;
                     const progressBarH = minDim * 0.015;
-                    const talentBtnY = progressBarY + progressBarH + minDim * 0.025;
+                    // 计算基因变化区域的高度
+                    const lastMutations = this.aiGenes.lastMutations || [];
+                    let mutationHeight = 0;
+                    if (lastMutations.length > 0) {
+                        const mutationCount = Math.min(lastMutations.length, 5);
+                        mutationHeight = minDim * 0.035 + mutationCount * minDim * 0.028;
+                        if (lastMutations.length > 5) {
+                            mutationHeight += minDim * 0.025;
+                        }
+                        mutationHeight += minDim * 0.025;
+                    }
+                    const talentBtnY = progressBarY + progressBarH + minDim * 0.025 + mutationHeight + minDim * 0.015;
                     if (x >= this.screenW / 2 - talentBtnW / 2 && x <= this.screenW / 2 + talentBtnW / 2 &&
                         y >= talentBtnY - talentBtnH / 2 && y <= talentBtnY + talentBtnH / 2) {
                         this.showTalentTree();
@@ -1766,10 +1979,52 @@ class Game {
                         ctx.fillStyle = '#6b3fa0';
                         ctx.fillRect(progressBarX, progressBarY, progressBarW * progress, progressBarH);
 
+                        // 本轮基因变化
+                        const lastMutations = this.aiGenes.lastMutations || [];
+                        let mutationY = progressBarY + progressBarH + minDim * 0.025;
+                        if (lastMutations.length > 0) {
+                            ctx.globalAlpha = easeText;
+                            ctx.font = `${minDim * 0.028}px monospace`;
+                            ctx.fillStyle = '#444';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('— 本轮基因进化 —', w / 2, mutationY);
+                            mutationY += minDim * 0.035;
+
+                            const branchNames = {
+                                attack: '攻击',
+                                movement: '移动',
+                                defense: '防御',
+                                ultimate: '大招',
+                                special: '特殊',
+                            };
+
+                            for (let i = 0; i < Math.min(lastMutations.length, 5); i++) {
+                                const mut = lastMutations[i];
+                                const branchColor = AIGeneTree.branches[mut.branch] ? AIGeneTree.branches[mut.branch].color : '#6b3fa0';
+                                const prefix = mut.type === 'mutation' ? '✦ 突变: ' : '+ 进化: ';
+                                const branchName = branchNames[mut.branch] || mut.branch;
+                                const text = `${prefix}[${branchName}] ${mut.newValue}`;
+
+                                ctx.globalAlpha = easeText * (0.9 - i * 0.1);
+                                ctx.font = `${minDim * 0.025}px monospace`;
+                                ctx.fillStyle = branchColor;
+                                ctx.fillText(text, w / 2, mutationY);
+                                mutationY += minDim * 0.028;
+                            }
+
+                            if (lastMutations.length > 5) {
+                                ctx.globalAlpha = easeText * 0.5;
+                                ctx.font = `${minDim * 0.022}px monospace`;
+                                ctx.fillStyle = '#666';
+                                ctx.fillText(`... 还有 ${lastMutations.length - 5} 项变化`, w / 2, mutationY);
+                                mutationY += minDim * 0.025;
+                            }
+                        }
+
                         // 查看基因谱按钮
                         const talentBtnW = minDim * 0.4;
                         const talentBtnH = minDim * 0.065;
-                        const talentBtnY = progressBarY + progressBarH + minDim * 0.025;
+                        const talentBtnY = mutationY + minDim * 0.015;
                         ctx.globalAlpha = easeText * 0.15;
                         ctx.fillStyle = '#6b3fa0';
                         ctx.fillRect(w / 2 - talentBtnW / 2, talentBtnY - talentBtnH / 2, talentBtnW, talentBtnH);

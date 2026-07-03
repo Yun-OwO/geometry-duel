@@ -859,6 +859,153 @@ html, body {
     padding-top: 6px;
 }
 
+.gene-detail-panel {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 320px;
+    background: rgba(10, 10, 22, 0.98);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    z-index: 30;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    animation: slideInRight 0.3s ease;
+}
+
+.gene-detail-panel.hidden {
+    display: none;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+    }
+}
+
+.gene-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.gene-detail-name {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.gene-detail-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.gene-detail-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.gene-detail-branch {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+}
+
+.gene-detail-stage {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+}
+
+.gene-detail-status {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    display: inline-block;
+}
+
+.gene-detail-desc {
+    color: #ccc;
+    line-height: 1.7;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.gene-detail-effect-title {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+    font-weight: 700;
+}
+
+.gene-detail-effect {
+    font-size: 14px;
+    color: #fff;
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    line-height: 1.6;
+}
+
+.gene-detail-prereq {
+    font-size: 11px;
+    color: var(--muted);
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+    .gene-detail-panel {
+        width: 90%;
+        right: 5%;
+        left: 5%;
+        top: auto;
+        bottom: 20px;
+        transform: none;
+        padding: 14px;
+    }
+
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}
+
 @media (max-width: 600px) {
     .talent-tree-container {
         width: 96vw;
