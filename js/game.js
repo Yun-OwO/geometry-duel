@@ -1376,7 +1376,7 @@ class Game {
                     ctx.fillStyle = '#000';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(isTouch ? '点击继续' : '按 R 继续', w / 2, btnY);
+                    ctx.fillText(isMobile ? '点击继续' : '按 R 继续', w / 2, btnY);
                 }
             }
         }
