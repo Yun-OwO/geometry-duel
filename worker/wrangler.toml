@@ -4,4 +4,4 @@ compatibility_date = "2024-01-01"
 
 [[kv_namespaces]]
 binding = "ROOM_KV"
-id = "your-kv-namespace-id"
+id = "b4eaefe84a7247bf8db25c7aa9e421e2"

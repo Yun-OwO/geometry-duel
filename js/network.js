@@ -1,5 +1,5 @@
 const NETWORK_CONFIG = {
-    SIGNALING_URL: '',
+    SIGNALING_URL: 'https://geo.rngoodday.qzz.io',
     STUN_SERVERS: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
