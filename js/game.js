@@ -180,6 +180,8 @@ class Game {
     initInput() {
         this.keys = {};
         this.mouseDown = false;
+        this.mouseZPressed = false;
+        this.mouseXPressed = false;
         this.touchInput = {
             moveX: 0,
             moveY: 0,
@@ -234,22 +236,41 @@ class Game {
         }, { passive: false });
 
         this.canvas.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if (this.isMobileDevice()) return;
+            if (this.state === GameState.PLAYING) {
+                if (e.button === 0) {
+                    this.mouseZPressed = true;
+                } else if (e.button === 2) {
+                    this.mouseXPressed = true;
+                }
+                return;
+            }
             this.handleMouseClick(e);
-        });
+        }, { passive: false });
 
         this.canvas.addEventListener('mousemove', (e) => {
+            if (this.isMobileDevice()) return;
             if (this.mouseDown) {
                 this.handleMouseMove(e);
             }
         });
 
         this.canvas.addEventListener('mouseup', (e) => {
+            if (this.isMobileDevice()) return;
+            if (e.button === 0) this.mouseZPressed = false;
+            if (e.button === 2) this.mouseXPressed = false;
             this.mouseDown = false;
-            this.touchInput.moveX = 0;
-            this.touchInput.moveY = 0;
-            this.touchInput.zPressed = false;
-            this.touchInput.xPressed = false;
         });
+
+        this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+    }
+
+    isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+            (navigator.maxTouchPoints > 0 && window.innerWidth < 800);
     }
 
     handleMouseClick(e) {
@@ -821,8 +842,8 @@ class Game {
             }
         }
 
-        input.zPressed = this.keys['KeyZ'] || this.touchInput.zPressed;
-        input.xPressed = this.keys['KeyX'] || this.touchInput.xPressed;
+        input.zPressed = this.keys['KeyZ'] || this.touchInput.zPressed || this.mouseZPressed;
+        input.xPressed = this.keys['KeyX'] || this.touchInput.xPressed || this.mouseXPressed;
 
         return input;
     }
@@ -1113,8 +1134,7 @@ class Game {
     }
 
     drawScreenUI(ctx) {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-            (navigator.maxTouchPoints > 0 && window.innerWidth < 800);
+        const isMobile = this.isMobileDevice();
 
         ctx.save();
 
@@ -1161,10 +1181,10 @@ class Game {
             ctx.fill();
             ctx.globalAlpha = 1;
             ctx.fillStyle = '#fff';
-            ctx.font = `${btnR * 0.6}px monospace`;
+            ctx.font = `${btnR * 0.45}px monospace`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('Z', zPos.x * dpr, zPos.y * dpr);
+            ctx.fillText('ATK', zPos.x * dpr, zPos.y * dpr);
 
             const xPos = this.getXButtonPos();
             ctx.globalAlpha = this.touchInput.xPressed ? 0.5 : 0.25;
@@ -1174,7 +1194,7 @@ class Game {
             ctx.fill();
             ctx.globalAlpha = 1;
             ctx.fillStyle = '#fff';
-            ctx.fillText('X', xPos.x * dpr, xPos.y * dpr);
+            ctx.fillText('ULT', xPos.x * dpr, xPos.y * dpr);
 
             const pausePos = this.getPauseButtonPos();
             ctx.globalAlpha = 0.3;
