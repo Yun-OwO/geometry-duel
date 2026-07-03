@@ -196,7 +196,6 @@ class Game {
 
         if (this.talentChart) {
             this.talentChart.resize();
-            this._fitTalentChartView();
         }
     }
 
@@ -271,41 +270,14 @@ class Game {
         });
 
         if (this.talentChart) {
-            const option = this._buildTalentTreeOption(branch);
+            const chartDom = document.getElementById('talent-tree-chart');
+            const rect = chartDom.getBoundingClientRect();
+            const option = this._buildTalentTreeOption(branch, rect.width, rect.height);
             this.talentChart.setOption(option, true);
-            this._fitTalentChartView();
         }
     }
 
-    _fitTalentChartView() {
-        if (!this.talentChart) return;
-        const chartDom = document.getElementById('talent-tree-chart');
-        const rect = chartDom.getBoundingClientRect();
-        const option = this.talentChart.getOption();
-        const seriesData = option.series[0].data;
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        for (const node of seriesData) {
-            if (node.x < minX) minX = node.x;
-            if (node.x > maxX) maxX = node.x;
-            if (node.y < minY) minY = node.y;
-            if (node.y > maxY) maxY = node.y;
-        }
-        const contentW = maxX - minX + 100;
-        const contentH = maxY - minY + 120;
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
-        const scaleX = rect.width / contentW;
-        const scaleY = rect.height / contentH;
-        const scale = Math.min(scaleX, scaleY) * 0.85;
-        this.talentChart.setOption({
-            series: [{
-                zoom: scale,
-                center: [centerX, centerY],
-            }]
-        });
-    }
-
-    _buildTalentTreeOption(branch) {
+    _buildTalentTreeOption(branch, viewW, viewH) {
         const branchNodes = getTalentNodesByBranch(branch);
         const unlockedSet = new Set(this.aiGenes.unlockedTalents || []);
         const availableTalents = getAvailableTalents(unlockedSet, this.aiGenes.maxUnlockedStage || 0);
@@ -313,8 +285,8 @@ class Game {
         const branchColor = AITalentTree.branches[branch].color;
 
         const stageColors = [
-            this._adjustColor(branchColor, -20),
-            branchColor,
+            this._adjustColor(branchColor, -30),
+            this._adjustColor(branchColor, -10),
             this._adjustColor(branchColor, 15),
             this._adjustColor(branchColor, 35),
         ];
@@ -332,14 +304,14 @@ class Game {
         }
 
         const positions = {};
-        const logicWidth = 1100;
-        const nodeGap = 65;
-        const leftPad = 90;
-        const rightPad = 90;
-        const topPad = 50;
-        const colSpacing = (logicWidth - leftPad - rightPad) / 3;
-        const totalHeight = maxCount * nodeGap + topPad * 2;
-        const logicHeight = Math.max(600, totalHeight);
+        const nodeGap = 90;
+        const leftPad = 100;
+        const rightPad = 100;
+        const topPad = 80;
+        const bottomPad = 80;
+        const colSpacing = 280;
+        const logicWidth = leftPad + 3 * colSpacing + rightPad;
+        const logicHeight = topPad + (maxCount - 1) * nodeGap + bottomPad;
 
         for (let s = 0; s < 4; s++) {
             const stageNodes = nodesByStage[s];
@@ -348,12 +320,21 @@ class Game {
 
             if (count === 0) continue;
 
-            const totalHeightNodes = (count - 1) * nodeGap;
-            const startY = (logicHeight - totalHeightNodes) / 2;
+            const totalNodesH = (count - 1) * nodeGap;
+            const startY = topPad + (logicHeight - topPad - bottomPad - totalNodesH) / 2;
             for (let i = 0; i < count; i++) {
                 const y = startY + i * nodeGap;
                 positions[stageNodes[i].id] = { x, y };
             }
+        }
+
+        let initZoom = 1;
+        let initCenter = [logicWidth / 2, logicHeight / 2];
+        if (viewW && viewH) {
+            const scaleX = viewW / logicWidth;
+            const scaleY = viewH / logicHeight;
+            initZoom = Math.min(scaleX, scaleY) * 0.9;
+            initCenter = [logicWidth / 2, logicHeight / 2];
         }
 
         const data = [];
@@ -460,9 +441,10 @@ class Game {
                 type: 'graph',
                 layout: 'none',
                 roam: true,
-                zoom: 1,
+                zoom: initZoom,
+                center: initCenter,
                 symbol: 'circle',
-                symbolSize: 42,
+                symbolSize: 44,
                 edgeSymbol: ['none', 'arrow'],
                 edgeSymbolSize: 8,
                 emphasis: { focus: 'adjacency', scale: 1.15 },
