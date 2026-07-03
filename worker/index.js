@@ -61,6 +61,11 @@ export default {
                 return this.sendSignal(code, request, env);
             }
 
+            if (path.startsWith('/api/room/') && path.endsWith('/input') && request.method === 'POST') {
+                const code = path.split('/')[3];
+                return this.sendInput(code, request, env);
+            }
+
             if (path.startsWith('/api/room/') && path.endsWith('/poll') && request.method === 'GET') {
                 const code = path.split('/')[3];
                 return this.pollSignals(code, request, env);
@@ -180,11 +185,43 @@ export default {
         return jsonResponse({ ok: true });
     },
 
+    async sendInput(code, request, env) {
+        code = code.toUpperCase();
+        const body = await request.json().catch(() => ({}));
+        const { frame, playerId, input } = body;
+
+        if (frame === undefined || playerId === undefined || !input) {
+            return jsonResponse({ error: 'Invalid input' }, 400);
+        }
+
+        const roomData = await env.ROOM_KV.get(code);
+        if (!roomData) {
+            return jsonResponse({ error: '房间不存在' }, 404);
+        }
+
+        const room = JSON.parse(roomData);
+        if (!room.frameInputs) room.frameInputs = {};
+        if (!room.frameInputs[frame]) room.frameInputs[frame] = {};
+        room.frameInputs[frame][playerId] = input;
+
+        const frames = Object.keys(room.frameInputs).map(Number).sort((a, b) => a - b);
+        if (frames.length > 200) {
+            for (let i = 0; i < frames.length - 200; i++) {
+                delete room.frameInputs[frames[i]];
+            }
+        }
+
+        await env.ROOM_KV.put(code, JSON.stringify(room), { expirationTtl: ROOM_TTL });
+
+        return jsonResponse({ ok: true });
+    },
+
     async pollSignals(code, request, env) {
         code = code.toUpperCase();
         const url = new URL(request.url);
         const playerId = parseInt(url.searchParams.get('playerId') || '0');
         const since = parseInt(url.searchParams.get('since') || '0');
+        const inputSince = parseInt(url.searchParams.get('inputSince') || '0');
 
         const roomData = await env.ROOM_KV.get(code);
         if (!roomData) {
@@ -201,10 +238,24 @@ export default {
             ? Math.max(...mySignals.map(s => s.timestamp))
             : since;
 
+        const frameInputs = {};
+        let maxInputFrame = inputSince;
+        if (room.frameInputs) {
+            for (const [f, inputs] of Object.entries(room.frameInputs)) {
+                const frameNum = parseInt(f);
+                if (frameNum > inputSince) {
+                    frameInputs[f] = inputs;
+                    if (frameNum > maxInputFrame) maxInputFrame = frameNum;
+                }
+            }
+        }
+
         return jsonResponse({
             signals: mySignals,
             since: newSince,
             players: room.players.map(p => ({ id: p.id, name: p.name, host: p.host })),
+            frameInputs,
+            inputSince: maxInputFrame,
         });
     },
 

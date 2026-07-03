@@ -6,8 +6,8 @@ const NETWORK_CONFIG = {
         { urls: 'stun:stun2.l.google.com:19302' },
     ],
     INPUT_BUFFER_SIZE: 3,
-    FRAME_DELAY: 2,
-    POLL_INTERVAL: 500,
+    FRAME_DELAY: 3,
+    POLL_INTERVAL: 100,
 };
 
 class DeterministicRandom {
@@ -53,7 +53,7 @@ class FrameSync {
     }
 
     addLocalInput(input) {
-        const delay = Network.dataChannels.size > 0 ? NETWORK_CONFIG.FRAME_DELAY : 0;
+        const delay = NETWORK_CONFIG.FRAME_DELAY;
         const frame = this.frame + delay;
         this.inputs.set(frame, { ...input, local: true });
         this.sendInput(frame, input);
@@ -61,13 +61,8 @@ class FrameSync {
     }
 
     sendInput(frame, input) {
-        if (Network.connections.size > 0) {
-            Network.broadcast({
-                type: 'input',
-                frame,
-                playerId: this.localPlayerId,
-                input: this.serializeInput(input),
-            });
+        if (Network.signalingUrl && Network.roomCode) {
+            Network.sendInputToServer(frame, this.localPlayerId, this.serializeInput(input));
         }
     }
 
@@ -97,16 +92,14 @@ class FrameSync {
     }
 
     canAdvance() {
-        const connectedRemotes = Network.dataChannels.size;
-        if (connectedRemotes === 0) {
-            const targetFrame = this.frame;
-            return this.inputs.has(targetFrame);
-        }
         if (this.frame < NETWORK_CONFIG.FRAME_DELAY) return false;
         const targetFrame = this.frame;
+        if (!this.inputs.has(targetFrame)) return false;
         const frameInputs = this.remoteFrames.get(targetFrame);
+        const expectedRemotes = this.playerCount - 1;
+        if (expectedRemotes <= 0) return true;
         if (!frameInputs) return false;
-        return frameInputs.size >= connectedRemotes;
+        return frameInputs.size >= expectedRemotes;
     }
 
     getInputForFrame(frame, playerId) {
@@ -155,6 +148,7 @@ class NetworkManager {
         this.lastPollTime = 0;
         this.signalQueue = [];
         this.pollSince = 0;
+        this.inputSince = 0;
         this.knownPlayers = [];
     }
 
@@ -249,6 +243,7 @@ class NetworkManager {
     startPolling() {
         this.stopPolling();
         this.pollSince = 0;
+        this.inputSince = 0;
         this.pollInterval = setInterval(() => this.pollSignals(), NETWORK_CONFIG.POLL_INTERVAL);
     }
 
@@ -264,12 +259,13 @@ class NetworkManager {
 
         try {
             const res = await fetch(
-                `${this.signalingUrl}/api/room/${this.roomCode}/poll?playerId=${this.playerId}&since=${this.pollSince}`
+                `${this.signalingUrl}/api/room/${this.roomCode}/poll?playerId=${this.playerId}&since=${this.pollSince}&inputSince=${this.inputSince || 0}`
             );
             if (!res.ok) return;
             const data = await res.json();
 
             if (data.since !== undefined) this.pollSince = data.since;
+            if (data.inputSince !== undefined) this.inputSince = data.inputSince;
 
             if (data.players) {
                 const oldLen = this.knownPlayers.length;
@@ -280,12 +276,15 @@ class NetworkManager {
                 if (this.knownPlayers.length !== oldLen && this.onPlayerJoin) {
                     this.onPlayerJoin(this.knownPlayers);
                 }
+            }
 
-                // 房主主动连接新玩家
-                if (this.isHost) {
-                    for (const p of this.knownPlayers) {
-                        if (p.id !== this.playerId && !this.connections.has(p.id)) {
-                            this.connectToPlayer(p.id);
+            if (data.frameInputs && this.frameSync) {
+                for (const [frameStr, inputs] of Object.entries(data.frameInputs)) {
+                    const frame = parseInt(frameStr);
+                    for (const [playerIdStr, inputData] of Object.entries(inputs)) {
+                        const pid = parseInt(playerIdStr);
+                        if (pid !== this.playerId) {
+                            this.frameSync.receiveInput(frame, pid, inputData);
                         }
                     }
                 }
@@ -317,6 +316,19 @@ class NetworkManager {
             });
         } catch (e) {
             console.warn('Send signal error:', e);
+        }
+    }
+
+    async sendInputToServer(frame, playerId, input) {
+        if (!this.signalingUrl || !this.roomCode) return;
+        try {
+            await fetch(`${this.signalingUrl}/api/room/${this.roomCode}/input`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ frame, playerId, input }),
+            });
+        } catch (e) {
+            console.warn('Send input error:', e);
         }
     }
 
