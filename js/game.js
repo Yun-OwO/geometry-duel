@@ -20,12 +20,9 @@ class Game {
         this.aiGenes = this.loadAIGenes();
 
         // 天赋树查看器状态
-        this.talentTreeView = false; // 是否显示天赋树查看器
-        this.talentTreeScroll = { x: 0, y: 0 }; // 天赋树平移偏移
-        this.talentTreeBranch = 'attack'; // 当前查看的分支
-        this.talentTreeStageFilter = -1; // -1=全部, 0-3=筛选阶段
-        this.talentTreeSelectedNode = null; // 当前选中的节点
-        this.talentTreeDragStart = null; // 拖拽起始坐标
+        this.talentTreeView = false;
+        this.talentTreeBranch = 'attack';
+        this.talentChart = null;
 
         this.setupCanvas();
         this.initInput();
@@ -196,6 +193,332 @@ class Game {
 
         this.screenW = w;
         this.screenH = h;
+
+        if (this.talentChart) {
+            this.talentChart.resize();
+            this._fitTalentChartView();
+        }
+    }
+
+    initTalentTreeChart() {
+        if (this.talentChart) return;
+
+        const chartDom = document.getElementById('talent-tree-chart');
+        this.talentChart = echarts.init(chartDom);
+
+        this.talentChart.on('mouseover', (params) => {
+            if (params.dataType === 'node') {
+                const rect = chartDom.getBoundingClientRect();
+                this._showTalentTooltip(params.data.id, rect.left + params.event.offsetX, rect.top + params.event.offsetY);
+            }
+        });
+
+        this.talentChart.on('mouseout', (params) => {
+            if (params.dataType === 'node') {
+                this._hideTalentTooltip();
+            }
+        });
+
+        const backBtn = document.getElementById('talent-tree-back');
+        if (backBtn && !backBtn._hasListener) {
+            backBtn._hasListener = true;
+            backBtn.addEventListener('click', () => {
+                this.hideTalentTree();
+                this.playSound('lCharge');
+                this.vibrate(15);
+            });
+        }
+
+        const tabs = document.querySelectorAll('.talent-tab');
+        tabs.forEach((tab) => {
+            if (!tab._hasListener) {
+                tab._hasListener = true;
+                tab.addEventListener('click', () => {
+                    const branch = tab.getAttribute('data-branch');
+                    this.switchTalentBranch(branch);
+                    this.vibrate(8);
+                });
+            }
+        });
+    }
+
+    showTalentTree() {
+        const screen = document.getElementById('talent-tree-screen');
+        screen.classList.remove('hidden');
+        this.talentTreeView = true;
+
+        this.initTalentTreeChart();
+        this.switchTalentBranch(this.talentTreeBranch);
+    }
+
+    hideTalentTree() {
+        const screen = document.getElementById('talent-tree-screen');
+        screen.classList.add('hidden');
+        this._hideTalentTooltip();
+        this.talentTreeView = false;
+    }
+
+    switchTalentBranch(branch) {
+        this.talentTreeBranch = branch;
+
+        const tabs = document.querySelectorAll('.talent-tab');
+        tabs.forEach((tab) => {
+            if (tab.getAttribute('data-branch') === branch) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+
+        if (this.talentChart) {
+            const option = this._buildTalentTreeOption(branch);
+            this.talentChart.setOption(option, true);
+            this._fitTalentChartView();
+        }
+    }
+
+    _fitTalentChartView() {
+        if (!this.talentChart) return;
+        const chartDom = document.getElementById('talent-tree-chart');
+        const rect = chartDom.getBoundingClientRect();
+        const logicWidth = 900;
+        const logicHeight = 600;
+        const scaleX = rect.width / logicWidth;
+        const scaleY = rect.height / logicHeight;
+        const scale = Math.min(scaleX, scaleY) * 0.9;
+        this.talentChart.setOption({
+            series: [{
+                zoom: scale,
+                center: [logicWidth / 2, logicHeight / 2],
+            }]
+        });
+    }
+
+    _buildTalentTreeOption(branch) {
+        const branchNodes = getTalentNodesByBranch(branch);
+        const unlockedSet = new Set(this.aiGenes.unlockedTalents || []);
+        const availableTalents = getAvailableTalents(unlockedSet, this.aiGenes.maxUnlockedStage || 0);
+        const availableSet = new Set(availableTalents.map(t => t.id));
+        const branchColor = AITalentTree.branches[branch].color;
+
+        const nodesByStage = {};
+        for (let s = 0; s < 4; s++) nodesByStage[s] = [];
+        for (const node of branchNodes) {
+            nodesByStage[node.stage].push(node);
+        }
+
+        for (let s = 0; s < 4; s++) {
+            nodesByStage[s].sort((a, b) => a.id.localeCompare(b.id));
+        }
+
+        const positions = {};
+        const logicWidth = 900;
+        const logicHeight = 600;
+        const leftPad = 80;
+        const rightPad = 80;
+        const topPad = 60;
+        const bottomPad = 60;
+        const availableW = logicWidth - leftPad - rightPad;
+        const availableH = logicHeight - topPad - bottomPad;
+
+        for (let s = 0; s < 4; s++) {
+            const stageNodes = nodesByStage[s];
+            const count = stageNodes.length;
+            const x = leftPad + s * (availableW / 3);
+
+            if (count === 0) continue;
+
+            if (count === 1) {
+                const y = topPad + availableH / 2;
+                positions[stageNodes[0].id] = { x, y };
+            } else {
+                const totalSpacing = availableH * 0.85;
+                const startY = topPad + (availableH - totalSpacing) / 2;
+                const step = totalSpacing / (count - 1);
+                for (let i = 0; i < count; i++) {
+                    const y = startY + i * step;
+                    positions[stageNodes[i].id] = { x, y };
+                }
+            }
+        }
+
+        const data = [];
+        for (const node of branchNodes) {
+            const pos = positions[node.id];
+            const isUnlocked = unlockedSet.has(node.id);
+            const isAvailable = availableSet.has(node.id);
+
+            let itemStyle;
+            if (isUnlocked) {
+                itemStyle = {
+                    color: branchColor,
+                    borderColor: '#fff',
+                    borderWidth: 3,
+                    shadowBlur: 20,
+                    shadowColor: branchColor,
+                };
+            } else if (isAvailable) {
+                itemStyle = {
+                    color: '#1a1a2e',
+                    borderColor: '#ffcc00',
+                    borderWidth: 3,
+                };
+            } else {
+                itemStyle = {
+                    color: '#1a1a2e',
+                    borderColor: '#444',
+                    borderWidth: 1.5,
+                    opacity: 0.5,
+                };
+            }
+
+            const labelColor = isUnlocked ? '#fff' : (isAvailable ? '#ffcc00' : '#666');
+            const labelOpacity = isUnlocked ? 1 : (isAvailable ? 0.9 : 0.4);
+
+            data.push({
+                id: node.id,
+                name: node.name.length > 4 ? node.name.slice(0, 4) + '…' : node.name,
+                x: pos.x,
+                y: pos.y,
+                fixed: true,
+                itemStyle: itemStyle,
+                label: {
+                    show: true,
+                    position: 'bottom',
+                    fontSize: 11,
+                    color: labelColor,
+                    opacity: labelOpacity,
+                    fontWeight: isUnlocked ? 'bold' : 'normal',
+                },
+            });
+        }
+
+        const links = [];
+        const drawn = new Set();
+        for (const node of branchNodes) {
+            const prereqs = node.prerequisites || [];
+            for (const preId of prereqs) {
+                const key = preId + '->' + node.id;
+                if (drawn.has(key)) continue;
+                drawn.add(key);
+                if (!positions[preId]) continue;
+
+                const preUnlocked = unlockedSet.has(preId);
+                const nodeUnlocked = unlockedSet.has(node.id);
+
+                let lineColor = '#333';
+                let lineOpacity = 0.4;
+                if (preUnlocked && nodeUnlocked) {
+                    lineColor = branchColor;
+                    lineOpacity = 0.9;
+                } else if (preUnlocked || nodeUnlocked) {
+                    lineColor = branchColor;
+                    lineOpacity = 0.3;
+                }
+
+                links.push({
+                    source: preId,
+                    target: node.id,
+                    lineStyle: {
+                        color: lineColor,
+                        opacity: lineOpacity,
+                        width: 2,
+                        curveness: 0.3,
+                    },
+                });
+            }
+        }
+
+        return {
+            tooltip: { show: false },
+            animationDuration: 600,
+            animationEasingUpdate: 'quinticInOut',
+            series: [{
+                type: 'graph',
+                layout: 'none',
+                roam: true,
+                zoom: 1,
+                symbol: 'circle',
+                symbolSize: 48,
+                edgeSymbol: ['none', 'arrow'],
+                edgeSymbolSize: 6,
+                emphasis: { focus: 'adjacency' },
+                data: data,
+                links: links,
+            }]
+        };
+    }
+
+    _showTalentTooltip(nodeId, x, y) {
+        const node = AITalentTree.nodes[nodeId];
+        if (!node) return;
+
+        const tooltip = document.getElementById('talent-tooltip');
+        const container = document.querySelector('.talent-tree-container');
+        const containerRect = container.getBoundingClientRect();
+        const unlockedSet = new Set(this.aiGenes.unlockedTalents || []);
+        const availableTalents = getAvailableTalents(unlockedSet, this.aiGenes.maxUnlockedStage || 0);
+        const availableSet = new Set(availableTalents.map(t => t.id));
+
+        const isUnlocked = unlockedSet.has(nodeId);
+        const isAvailable = availableSet.has(nodeId);
+        const branchColor = AITalentTree.branches[node.branch].color;
+
+        tooltip.querySelector('.tooltip-title').textContent = node.name;
+        tooltip.querySelector('.tooltip-title').style.color = isUnlocked ? branchColor : (isAvailable ? '#ffcc00' : '#888');
+        tooltip.querySelector('.tooltip-stage').textContent = `阶段${node.stage} · ${AITalentTree.stages[node.stage].name}`;
+
+        const statusEl = tooltip.querySelector('.tooltip-status');
+        if (isUnlocked) {
+            statusEl.textContent = '● 已解锁';
+            statusEl.style.color = branchColor;
+        } else if (isAvailable) {
+            statusEl.textContent = '○ 可解锁';
+            statusEl.style.color = '#ffcc00';
+        } else {
+            statusEl.textContent = '◌ 锁定';
+            statusEl.style.color = '#666';
+        }
+
+        tooltip.querySelector('.tooltip-desc').textContent = node.desc;
+
+        const prereqEl = tooltip.querySelector('.tooltip-prereq');
+        if (node.prerequisites && node.prerequisites.length > 0) {
+            const prereqNames = node.prerequisites.map(preId => {
+                const preNode = AITalentTree.nodes[preId];
+                return preNode ? preNode.name : preId;
+            });
+            prereqEl.textContent = '前置: ' + prereqNames.join(', ');
+            prereqEl.style.display = 'block';
+        } else {
+            prereqEl.style.display = 'none';
+        }
+
+        tooltip.classList.remove('hidden');
+        const tooltipRect = tooltip.getBoundingClientRect();
+
+        let left = x - containerRect.left + 15;
+        let top = y - containerRect.top + 15;
+
+        if (left + tooltipRect.width > containerRect.width - 10) {
+            left = x - containerRect.left - tooltipRect.width - 15;
+        }
+        if (top + tooltipRect.height > containerRect.height - 10) {
+            top = y - containerRect.top - tooltipRect.height - 15;
+        }
+
+        if (left < 5) left = 5;
+        if (top < 5) top = 5;
+
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+    }
+
+    _hideTalentTooltip() {
+        const tooltip = document.getElementById('talent-tooltip');
+        if (tooltip) {
+            tooltip.classList.add('hidden');
+        }
     }
 
     initInput() {
@@ -364,15 +687,6 @@ class Game {
             const y = t.clientY;
             const id = t.identifier;
 
-            // 天赋树查看器触摸事件
-            if (this.talentTreeView) {
-                this._lastTouchX = x;
-                this._lastTouchY = y;
-                this._talentTreeTouchMoved = false;
-                this._handleTalentTreeTouch(x, y);
-                continue;
-            }
-
             if (this.state === GameState.GAME_OVER) {
                 const minDim = Math.min(this.screenW, this.screenH);
                 const btnW = minDim * 0.5;
@@ -401,9 +715,7 @@ class Game {
                     const talentBtnY = progressBarY + progressBarH + minDim * 0.025;
                     if (x >= this.screenW / 2 - talentBtnW / 2 && x <= this.screenW / 2 + talentBtnW / 2 &&
                         y >= talentBtnY - talentBtnH / 2 && y <= talentBtnY + talentBtnH / 2) {
-                        this.talentTreeView = true;
-                        this.talentTreeScroll = { x: 0, y: 0 };
-                        this.talentTreeSelectedNode = null;
+                        this.showTalentTree();
                         this.playSound('lCharge');
                         this.vibrate(15);
                         continue;
@@ -487,20 +799,6 @@ class Game {
             const x = t.clientX;
             const y = t.clientY;
             const id = t.identifier;
-
-            // 天赋树查看器平移
-            if (this.talentTreeView) {
-                const dx = x - (this._lastTouchX || x);
-                const dy = y - (this._lastTouchY || y);
-                if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-                    this._talentTreeTouchMoved = true;
-                }
-                this.talentTreeScroll.x += dx;
-                this.talentTreeScroll.y += dy;
-                this._lastTouchX = x;
-                this._lastTouchY = y;
-                continue;
-            }
 
             if (id === this.touchState.joystickId) {
                 this.updateJoystick(x, y);
@@ -806,13 +1104,7 @@ class Game {
     }
 
     update(dt) {
-        // 天赋树查看器模式下不更新游戏逻辑
         if (this.talentTreeView) {
-            // 允许键盘操作天赋树
-            if (this.keys['Escape']) {
-                this.talentTreeView = false;
-                this.keys['Escape'] = false;
-            }
             return;
         }
 
@@ -1161,12 +1453,6 @@ class Game {
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, w, h);
 
-        // 天赋树查看器模式下直接绘制天赋树
-        if (this.talentTreeView) {
-            this.drawTalentTree();
-            return;
-        }
-
         ctx.save();
 
         const scale = this.screenW / this.viewW * this.dpr;
@@ -1191,576 +1477,6 @@ class Game {
         ctx.restore();
 
         this.drawScreenUI(ctx);
-    }
-
-    // 天赋树查看器触摸事件处理
-    _handleTalentTreeTouch(x, y) {
-        const w = this.screenW;
-        const h = this.screenH;
-        const minDim = Math.min(w, h);
-
-        // 底部返回按钮
-        const backBtnW = minDim * 0.35;
-        const backBtnH = minDim * 0.08;
-        const backBtnY = h - minDim * 0.12;
-        if (x >= w / 2 - backBtnW / 2 && x <= w / 2 + backBtnW / 2 &&
-            y >= backBtnY - backBtnH / 2 && y <= backBtnY + backBtnH / 2) {
-            this.talentTreeView = false;
-            this.playSound('lCharge');
-            this.vibrate(15);
-            return;
-        }
-
-        // 如果有选中节点，先检查是否点击了弹窗的关闭区域
-        if (this.talentTreeSelectedNode) {
-            const popupW = minDim * 0.7;
-            const popupH = minDim * 0.4;
-            const popupX = w / 2 - popupW / 2;
-            const popupY = h / 2 - popupH / 2;
-            const closeBtnR = minDim * 0.03;
-            const closeX = popupX + popupW - closeBtnR;
-            const closeY = popupY + closeBtnR;
-            const dx = x - closeX;
-            const dy = y - closeY;
-            if (dx * dx + dy * dy <= closeBtnR * closeBtnR) {
-                this.talentTreeSelectedNode = null;
-                this.vibrate(5);
-                return;
-            }
-            if (x >= popupX && x <= popupX + popupW &&
-                y >= popupY && y <= popupY + popupH) {
-                return;
-            }
-            this.talentTreeSelectedNode = null;
-        }
-
-        // 分支标签按钮（5个分支）
-        const branchKeys = Object.keys(AITalentTree.branches);
-        const branchBtnW = minDim * 0.15;
-        const branchBtnH = minDim * 0.055;
-        const branchBtnY = minDim * 0.15;
-        const totalBranchW = branchKeys.length * branchBtnW + (branchKeys.length - 1) * minDim * 0.015;
-        const branchStartX = w / 2 - totalBranchW / 2;
-        for (let i = 0; i < branchKeys.length; i++) {
-            const bx = branchStartX + i * (branchBtnW + minDim * 0.015);
-            if (x >= bx && x <= bx + branchBtnW &&
-                y >= branchBtnY && y <= branchBtnY + branchBtnH) {
-                this.talentTreeBranch = branchKeys[i];
-                this.talentTreeScroll = { x: 0, y: 0 };
-                this.talentTreeSelectedNode = null;
-                this.vibrate(8);
-                return;
-            }
-        }
-
-        // 如果触摸发生了移动，视为拖拽，不处理点击
-        if (this._talentTreeTouchMoved) return;
-
-        // 检测节点点击
-        const layout = this._computeTalentTreeLayout();
-        const scrollX = this.talentTreeScroll.x;
-        const scrollY = this.talentTreeScroll.y;
-        const nodeR = layout.nodeRadius;
-
-        for (const nodeId in layout.positions) {
-            const pos = layout.positions[nodeId];
-            const screenX = pos.x + scrollX;
-            const screenY = pos.y + scrollY;
-            const dx = x - screenX;
-            const dy = y - screenY;
-            if (dx * dx + dy * dy <= nodeR * nodeR * 1.2) {
-                this.talentTreeSelectedNode = nodeId;
-                this.playSound('lCharge');
-                this.vibrate(10);
-                return;
-            }
-        }
-    }
-
-    // 计算天赋树节点布局位置
-    _computeTalentTreeLayout() {
-        const w = this.screenW;
-        const h = this.screenH;
-        const minDim = Math.min(w, h);
-
-        const branchBtnY = minDim * 0.15;
-        const branchBtnH = minDim * 0.055;
-        const backBtnY = h - minDim * 0.12;
-
-        const leftPad = 60;
-        const rightPad = 60;
-        const topPad = branchBtnY + branchBtnH + minDim * 0.03;
-        const bottomPad = backBtnY - minDim * 0.03;
-
-        const availableW = w - leftPad - rightPad;
-        const availableH = bottomPad - topPad;
-
-        const numStages = 4;
-        const colSpacing = availableW / (numStages - 1);
-        const nodeRadius = Math.max(18, minDim * 0.032);
-
-        const branchNodes = getTalentNodesByBranch(this.talentTreeBranch);
-        const nodesByStage = {};
-        for (let s = 0; s < numStages; s++) nodesByStage[s] = [];
-        for (const node of branchNodes) {
-            if (nodesByStage[node.stage]) {
-                nodesByStage[node.stage].push(node);
-            }
-        }
-
-        for (let s = 0; s < numStages; s++) {
-            nodesByStage[s].sort((a, b) => a.id.localeCompare(b.id));
-        }
-
-        const positions = {};
-
-        for (let s = 0; s < numStages; s++) {
-            const stageNodes = nodesByStage[s];
-            const count = stageNodes.length;
-            const colX = leftPad + s * colSpacing;
-
-            if (count === 0) continue;
-
-            if (count === 1) {
-                const y = topPad + availableH / 2;
-                positions[stageNodes[0].id] = { x: colX, y: y, node: stageNodes[0] };
-            } else {
-                const totalSpacing = availableH * 0.85;
-                const startY = topPad + (availableH - totalSpacing) / 2;
-                const step = totalSpacing / (count - 1);
-                for (let i = 0; i < count; i++) {
-                    const y = startY + i * step;
-                    positions[stageNodes[i].id] = { x: colX, y: y, node: stageNodes[i] };
-                }
-            }
-        }
-
-        return {
-            positions: positions,
-            nodeRadius: nodeRadius,
-            leftPad: leftPad,
-            rightPad: rightPad,
-            topPad: topPad,
-            bottomPad: bottomPad,
-            colSpacing: colSpacing
-        };
-    }
-
-    // 绘制天赋树查看器
-    drawTalentTree() {
-        const ctx = this.ctx;
-        const w = this.canvas.width;
-        const h = this.canvas.height;
-        const dpr = this.dpr;
-        const sw = this.screenW;
-        const sh = this.screenH;
-        const minDim = Math.min(sw, sh);
-
-        // 背景
-        ctx.fillStyle = '#0d0d1a';
-        ctx.fillRect(0, 0, w, h);
-
-        // 背景装饰网格
-        ctx.globalAlpha = 0.03;
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1;
-        const gridSize = 40 * dpr;
-        const gridOffsetX = (this.talentTreeScroll.x * dpr) % gridSize;
-        const gridOffsetY = (this.talentTreeScroll.y * dpr) % gridSize;
-        for (let gx = gridOffsetX; gx < w; gx += gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(gx, 0);
-            ctx.lineTo(gx, h);
-            ctx.stroke();
-        }
-        for (let gy = gridOffsetY; gy < h; gy += gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(0, gy);
-            ctx.lineTo(w, gy);
-            ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
-
-        // 标题
-        const stageName = AITalentTree.stages[this.aiGenes.maxUnlockedStage || 0].name;
-        const titleText = 'AI天赋谱 · ' + stageName;
-        ctx.fillStyle = '#fff';
-        ctx.font = `bold ${minDim * 0.055 * dpr}px monospace`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(titleText, w / 2, minDim * 0.06 * dpr);
-
-        // 分支标签按钮
-        const branchKeys = Object.keys(AITalentTree.branches);
-        const branchBtnW = minDim * 0.15;
-        const branchBtnH = minDim * 0.055;
-        const branchBtnY = minDim * 0.15;
-        const branchSpacing = minDim * 0.015;
-        const totalBranchW = branchKeys.length * branchBtnW + (branchKeys.length - 1) * branchSpacing;
-        const branchStartX = sw / 2 - totalBranchW / 2;
-        for (let i = 0; i < branchKeys.length; i++) {
-            const key = branchKeys[i];
-            const branch = AITalentTree.branches[key];
-            const bx = (branchStartX + i * (branchBtnW + branchSpacing)) * dpr;
-            const by = branchBtnY * dpr;
-            const bw = branchBtnW * dpr;
-            const bh = branchBtnH * dpr;
-            const isActive = this.talentTreeBranch === key;
-
-            ctx.globalAlpha = isActive ? 0.6 : 0.15;
-            ctx.fillStyle = branch.color;
-            ctx.fillRect(bx, by, bw, bh);
-            if (isActive) {
-                ctx.globalAlpha = 1;
-                ctx.strokeStyle = branch.color;
-                ctx.lineWidth = 2 * dpr;
-                ctx.strokeRect(bx, by, bw, bh);
-            }
-            ctx.globalAlpha = isActive ? 1 : 0.6;
-            ctx.fillStyle = '#fff';
-            ctx.font = `${bh * 0.4}px monospace`;
-            ctx.fillText(branch.name, bx + bw / 2, by + bh / 2);
-        }
-
-        ctx.globalAlpha = 1;
-
-        // 计算节点布局
-        const layout = this._computeTalentTreeLayout();
-        const positions = layout.positions;
-        const nodeR = layout.nodeRadius;
-        const scrollX = this.talentTreeScroll.x;
-        const scrollY = this.talentTreeScroll.y;
-        const branchColor = AITalentTree.branches[this.talentTreeBranch].color;
-
-        const unlockedSet = new Set(this.aiGenes.unlockedTalents || []);
-        const availableSet = new Set();
-        if (this.aiGenes.maxUnlockedStage !== undefined) {
-            const availableTalents = getAvailableTalents(unlockedSet, this.aiGenes.maxUnlockedStage);
-            for (const at of availableTalents) availableSet.add(at.id);
-        }
-
-        // 阶段标签（竖排，在每列顶部）
-        ctx.globalAlpha = 0.6;
-        ctx.fillStyle = '#888';
-        ctx.font = `${minDim * 0.025 * dpr}px monospace`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        for (let s = 0; s < 4; s++) {
-            const colX = (layout.leftPad + s * layout.colSpacing + scrollX) * dpr;
-            const labelY = (layout.topPad - minDim * 0.01 + scrollY) * dpr;
-            const stageInfo = AITalentTree.stages[s];
-            ctx.fillText(`S${s} · ${stageInfo.name}`, colX, labelY);
-        }
-        ctx.globalAlpha = 1;
-
-        // 绘制连线（贝塞尔曲线）
-        const drawnConnections = new Set();
-        for (const nodeId in positions) {
-            const pos = positions[nodeId];
-            const node = pos.node;
-            const prereqs = node.prerequisites || [];
-            for (const preId of prereqs) {
-                const connKey = preId + '->' + nodeId;
-                if (drawnConnections.has(connKey)) continue;
-                drawnConnections.add(connKey);
-                if (!positions[preId]) continue;
-
-                const prePos = positions[preId];
-                const x1 = (prePos.x + scrollX + nodeR) * dpr;
-                const y1 = (prePos.y + scrollY) * dpr;
-                const x2 = (pos.x + scrollX - nodeR) * dpr;
-                const y2 = (pos.y + scrollY) * dpr;
-
-                const preUnlocked = unlockedSet.has(preId);
-                const nodeUnlocked = unlockedSet.has(nodeId);
-
-                let lineColor = '#333';
-                let lineAlpha = 0.4;
-                if (preUnlocked && nodeUnlocked) {
-                    lineColor = branchColor;
-                    lineAlpha = 0.9;
-                } else if (preUnlocked || nodeUnlocked) {
-                    lineColor = branchColor;
-                    lineAlpha = 0.3;
-                }
-
-                const midX = (x1 + x2) / 2;
-                const cpOffset = Math.abs(x2 - x1) * 0.4;
-
-                ctx.globalAlpha = lineAlpha;
-                ctx.strokeStyle = lineColor;
-                ctx.lineWidth = 2 * dpr;
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.bezierCurveTo(x1 + cpOffset, y1, x2 - cpOffset, y2, x2, y2);
-                ctx.stroke();
-            }
-        }
-        ctx.globalAlpha = 1;
-
-        // 绘制节点
-        const pulsePhase = (this.frameCount % 60) / 60;
-        const pulseScale = 1 + Math.sin(pulsePhase * Math.PI * 2) * 0.08;
-
-        for (const nodeId in positions) {
-            const pos = positions[nodeId];
-            const cx = (pos.x + scrollX) * dpr;
-            const cy = (pos.y + scrollY) * dpr;
-            const r = nodeR * dpr;
-
-            const isUnlocked = unlockedSet.has(nodeId);
-            const isAvailable = availableSet.has(nodeId);
-            const isSelected = this.talentTreeSelectedNode === nodeId;
-
-            // 发光效果（已解锁）
-            if (isUnlocked) {
-                const glowR = r * 1.8;
-                const gradient = ctx.createRadialGradient(cx, cy, r * 0.5, cx, cy, glowR);
-                gradient.addColorStop(0, branchColor + '80');
-                gradient.addColorStop(1, branchColor + '00');
-                ctx.globalAlpha = 0.6;
-                ctx.fillStyle = gradient;
-                ctx.beginPath();
-                ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // 脉动光圈（可解锁）
-            if (isAvailable) {
-                const pulseR = r * pulseScale * 1.3;
-                ctx.globalAlpha = 0.3 + Math.sin(pulsePhase * Math.PI * 2) * 0.2;
-                ctx.strokeStyle = '#ffcc00';
-                ctx.lineWidth = 2 * dpr;
-                ctx.beginPath();
-                ctx.arc(cx, cy, pulseR, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-
-            // 选中高亮
-            if (isSelected) {
-                ctx.globalAlpha = 1;
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 3 * dpr;
-                ctx.beginPath();
-                ctx.arc(cx, cy, r * 1.2, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-
-            // 节点主体圆
-            ctx.globalAlpha = 1;
-            if (isUnlocked) {
-                ctx.fillStyle = branchColor;
-            } else if (isAvailable) {
-                ctx.fillStyle = '#1a1a2e';
-            } else {
-                ctx.fillStyle = '#1a1a2e';
-                ctx.globalAlpha = 0.5;
-            }
-            ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.fill();
-
-            // 边框
-            ctx.globalAlpha = 1;
-            if (isUnlocked) {
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2 * dpr;
-            } else if (isAvailable) {
-                ctx.strokeStyle = '#ffcc00';
-                ctx.lineWidth = 2.5 * dpr;
-            } else {
-                ctx.strokeStyle = '#444';
-                ctx.lineWidth = 1.5 * dpr;
-            }
-            ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // 节点内文字（阶段 + 缩写）
-            ctx.globalAlpha = isUnlocked ? 1 : (isAvailable ? 0.9 : 0.4);
-            ctx.fillStyle = isUnlocked ? '#fff' : (isAvailable ? '#ffcc00' : '#666');
-            ctx.font = `bold ${r * 0.6}px monospace`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('S' + pos.node.stage, cx, cy);
-        }
-
-        ctx.globalAlpha = 1;
-
-        // 底部返回按钮
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const backBtnW = minDim * 0.35;
-        const backBtnH = minDim * 0.08;
-        const backBtnY = sh - minDim * 0.12;
-        const backBtnX = sw / 2 - backBtnW / 2;
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(backBtnX * dpr, backBtnY * dpr, backBtnW * dpr, backBtnH * dpr);
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1.5 * dpr;
-        ctx.strokeRect(backBtnX * dpr, backBtnY * dpr, backBtnW * dpr, backBtnH * dpr);
-        ctx.fillStyle = '#fff';
-        ctx.font = `${backBtnH * 0.4 * dpr}px monospace`;
-        ctx.fillText('返回', sw / 2 * dpr, backBtnY * dpr + backBtnH * dpr / 2);
-
-        // 节点详情弹窗
-        if (this.talentTreeSelectedNode) {
-            const selectedNode = AITalentTree.nodes[this.talentTreeSelectedNode];
-            if (selectedNode) {
-                const popupW = minDim * 0.7;
-                const popupH = minDim * 0.45;
-                const popupX = sw / 2 - popupW / 2;
-                const popupY = sh / 2 - popupH / 2;
-
-                // 弹窗背景
-                ctx.globalAlpha = 0.95;
-                ctx.fillStyle = '#0d0d1a';
-                ctx.fillRect(popupX * dpr, popupY * dpr, popupW * dpr, popupH * dpr);
-                ctx.globalAlpha = 1;
-                ctx.strokeStyle = branchColor;
-                ctx.lineWidth = 2 * dpr;
-                ctx.strokeRect(popupX * dpr, popupY * dpr, popupW * dpr, popupH * dpr);
-
-                // 关闭按钮
-                const closeBtnR = minDim * 0.03;
-                const closeX = popupX + popupW - closeBtnR;
-                const closeY = popupY + closeBtnR;
-                ctx.globalAlpha = 0.3;
-                ctx.fillStyle = '#fff';
-                ctx.beginPath();
-                ctx.arc(closeX * dpr, closeY * dpr, closeBtnR * dpr, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1;
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 1.5 * dpr;
-                ctx.beginPath();
-                ctx.arc(closeX * dpr, closeY * dpr, closeBtnR * dpr, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.fillStyle = '#fff';
-                ctx.font = `${closeBtnR * dpr}px monospace`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('×', closeX * dpr, closeY * dpr);
-
-                const isUnlocked = unlockedSet.has(selectedNode.id);
-                const isAvailable = availableSet.has(selectedNode.id);
-
-                // 节点名称
-                ctx.globalAlpha = 1;
-                ctx.fillStyle = isUnlocked ? branchColor : (isAvailable ? '#ffcc00' : '#888');
-                ctx.font = `bold ${minDim * 0.035 * dpr}px monospace`;
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'top';
-                ctx.fillText(selectedNode.name, (popupX + minDim * 0.04) * dpr, (popupY + minDim * 0.04) * dpr);
-
-                // 阶段标签
-                ctx.globalAlpha = 0.7;
-                ctx.fillStyle = '#aaa';
-                ctx.font = `${minDim * 0.022 * dpr}px monospace`;
-                ctx.fillText(
-                    `阶段${selectedNode.stage} · ${AITalentTree.stages[selectedNode.stage].name}`,
-                    (popupX + minDim * 0.04) * dpr,
-                    (popupY + minDim * 0.09) * dpr
-                );
-
-                // 状态
-                const statusY = popupY + minDim * 0.13;
-                if (isUnlocked) {
-                    ctx.globalAlpha = 1;
-                    ctx.fillStyle = branchColor;
-                    ctx.font = `bold ${minDim * 0.025 * dpr}px monospace`;
-                    ctx.fillText('● 已解锁', (popupX + minDim * 0.04) * dpr, statusY * dpr);
-                } else if (isAvailable) {
-                    ctx.globalAlpha = 1;
-                    ctx.fillStyle = '#ffcc00';
-                    ctx.font = `bold ${minDim * 0.025 * dpr}px monospace`;
-                    ctx.fillText('○ 可解锁', (popupX + minDim * 0.04) * dpr, statusY * dpr);
-                } else {
-                    ctx.globalAlpha = 0.5;
-                    ctx.fillStyle = '#666';
-                    ctx.font = `${minDim * 0.025 * dpr}px monospace`;
-                    ctx.fillText('◌ 锁定', (popupX + minDim * 0.04) * dpr, statusY * dpr);
-                }
-
-                // 分隔线
-                const lineY = popupY + minDim * 0.18;
-                ctx.globalAlpha = 0.2;
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 1 * dpr;
-                ctx.beginPath();
-                ctx.moveTo((popupX + minDim * 0.04) * dpr, lineY * dpr);
-                ctx.lineTo((popupX + popupW - minDim * 0.04) * dpr, lineY * dpr);
-                ctx.stroke();
-
-                // 描述
-                ctx.globalAlpha = 0.85;
-                ctx.fillStyle = '#ddd';
-                ctx.font = `${minDim * 0.023 * dpr}px monospace`;
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'top';
-
-                const descX = popupX + minDim * 0.04;
-                const descY = popupY + minDim * 0.21;
-                const descMaxW = popupW - minDim * 0.08;
-                const words = selectedNode.desc;
-                let line = '';
-                let lineCount = 0;
-                let currentY = descY;
-                const lineHeight = minDim * 0.032;
-                const maxLines = 5;
-
-                for (let ci = 0; ci < words.length; ci++) {
-                    const testLine = line + words[ci];
-                    if (ctx.measureText(testLine).width > descMaxW * dpr && line !== '') {
-                        if (lineCount >= maxLines - 1) {
-                            while (ctx.measureText(line + '...').width > descMaxW * dpr && line.length > 0) {
-                                line = line.slice(0, -1);
-                            }
-                            line += '...';
-                            ctx.fillText(line, descX * dpr, currentY * dpr);
-                            lineCount++;
-                            break;
-                        }
-                        ctx.fillText(line, descX * dpr, currentY * dpr);
-                        line = words[ci];
-                        currentY += lineHeight;
-                        lineCount++;
-                    } else {
-                        line = testLine;
-                    }
-                }
-                if (line !== '' && lineCount < maxLines) {
-                    ctx.fillText(line, descX * dpr, currentY * dpr);
-                }
-
-                // 前置节点
-                if (selectedNode.prerequisites && selectedNode.prerequisites.length > 0) {
-                    const prereqY = popupY + popupH - minDim * 0.06;
-                    ctx.globalAlpha = 0.5;
-                    ctx.fillStyle = '#888';
-                    ctx.font = `${minDim * 0.02 * dpr}px monospace`;
-                    let prereqText = '前置: ';
-                    for (let pi = 0; pi < selectedNode.prerequisites.length; pi++) {
-                        const preNode = AITalentTree.nodes[selectedNode.prerequisites[pi]];
-                        if (preNode) {
-                            if (pi > 0) prereqText += ', ';
-                            prereqText += preNode.name;
-                        }
-                    }
-                    if (ctx.measureText(prereqText).width > descMaxW * dpr) {
-                        while (ctx.measureText(prereqText + '...').width > descMaxW * dpr && prereqText.length > 0) {
-                            prereqText = prereqText.slice(0, -1);
-                        }
-                        prereqText += '...';
-                    }
-                    ctx.fillText(prereqText, descX * dpr, prereqY * dpr);
-                }
-            }
-        }
-
-        ctx.globalAlpha = 1;
     }
 
     drawBackground() {

@@ -166,6 +166,31 @@
             </div>
         </div>
 
+        <div id="talent-tree-screen" class="overlay hidden">
+            <div class="talent-tree-container">
+                <div class="talent-tree-header">
+                    <button class="back-btn" id="talent-tree-back">←</button>
+                    <h2 class="talent-tree-title">AI天赋谱</h2>
+                    <div class="talent-tree-tabs">
+                        <button class="talent-tab active" data-branch="attack">攻击</button>
+                        <button class="talent-tab" data-branch="movement">移动</button>
+                        <button class="talent-tab" data-branch="defense">防御</button>
+                        <button class="talent-tab" data-branch="ultimate">大招</button>
+                        <button class="talent-tab" data-branch="special">特殊</button>
+                    </div>
+                </div>
+                <div id="talent-tree-chart"></div>
+                <div id="talent-tooltip" class="talent-tooltip hidden">
+                    <div class="tooltip-title"></div>
+                    <div class="tooltip-stage"></div>
+                    <div class="tooltip-status"></div>
+                    <div class="tooltip-desc"></div>
+                    <div class="tooltip-prereq"></div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
         <script src="js/howler.js" defer></script>
         <script src="js/config.js" defer></script>
         <script src="js/ai-talent-tree.js" defer></script>

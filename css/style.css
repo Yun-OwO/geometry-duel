@@ -740,3 +740,147 @@ html, body {
         padding-bottom: 6px;
     }
 }
+
+.talent-tree-container {
+    width: 92vw;
+    height: 90vh;
+    max-width: 1200px;
+    background: rgba(10, 10, 20, 0.95);
+    border: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
+    animation: panelIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.talent-tree-header {
+    padding: 20px 24px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: relative;
+}
+
+.talent-tree-title {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 22px;
+    letter-spacing: 3px;
+    text-align: center;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.talent-tree-tabs {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.talent-tab {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 8px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+}
+
+.talent-tab:hover {
+    border-color: var(--fg);
+    color: var(--fg);
+}
+
+.talent-tab.active {
+    background: var(--fg);
+    color: #000;
+    border-color: var(--fg);
+}
+
+#talent-tree-chart {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+}
+
+.talent-tooltip {
+    position: absolute;
+    background: rgba(10, 10, 20, 0.98);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    max-width: 280px;
+    pointer-events: none;
+    z-index: 20;
+    font-size: 12px;
+    line-height: 1.5;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+    transition: opacity 0.15s ease;
+}
+
+.talent-tooltip.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.tooltip-title {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+}
+
+.tooltip-stage {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+}
+
+.tooltip-status {
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.tooltip-desc {
+    color: #ccc;
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+.tooltip-prereq {
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 6px;
+}
+
+@media (max-width: 600px) {
+    .talent-tree-container {
+        width: 96vw;
+        height: 94vh;
+    }
+
+    .talent-tree-header {
+        padding: 14px 16px 10px;
+    }
+
+    .talent-tree-title {
+        font-size: 18px;
+        margin-bottom: 8px;
+    }
+
+    .talent-tab {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+
+    .talent-tooltip {
+        max-width: 240px;
+        padding: 10px 12px;
+    }
+}
