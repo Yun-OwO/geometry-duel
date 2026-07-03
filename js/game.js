@@ -281,15 +281,26 @@ class Game {
         if (!this.talentChart) return;
         const chartDom = document.getElementById('talent-tree-chart');
         const rect = chartDom.getBoundingClientRect();
-        const logicWidth = 900;
-        const logicHeight = 600;
-        const scaleX = rect.width / logicWidth;
-        const scaleY = rect.height / logicHeight;
-        const scale = Math.min(scaleX, scaleY) * 0.9;
+        const option = this.talentChart.getOption();
+        const seriesData = option.series[0].data;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const node of seriesData) {
+            if (node.x < minX) minX = node.x;
+            if (node.x > maxX) maxX = node.x;
+            if (node.y < minY) minY = node.y;
+            if (node.y > maxY) maxY = node.y;
+        }
+        const contentW = maxX - minX + 100;
+        const contentH = maxY - minY + 120;
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        const scaleX = rect.width / contentW;
+        const scaleY = rect.height / contentH;
+        const scale = Math.min(scaleX, scaleY) * 0.85;
         this.talentChart.setOption({
             series: [{
                 zoom: scale,
-                center: [logicWidth / 2, logicHeight / 2],
+                center: [centerX, centerY],
             }]
         });
     }
@@ -301,10 +312,19 @@ class Game {
         const availableSet = new Set(availableTalents.map(t => t.id));
         const branchColor = AITalentTree.branches[branch].color;
 
+        const stageColors = [
+            this._adjustColor(branchColor, -20),
+            branchColor,
+            this._adjustColor(branchColor, 15),
+            this._adjustColor(branchColor, 35),
+        ];
+
         const nodesByStage = {};
+        let maxCount = 1;
         for (let s = 0; s < 4; s++) nodesByStage[s] = [];
         for (const node of branchNodes) {
             nodesByStage[node.stage].push(node);
+            if (nodesByStage[node.stage].length > maxCount) maxCount = nodesByStage[node.stage].length;
         }
 
         for (let s = 0; s < 4; s++) {
@@ -312,33 +332,27 @@ class Game {
         }
 
         const positions = {};
-        const logicWidth = 900;
-        const logicHeight = 600;
-        const leftPad = 80;
-        const rightPad = 80;
-        const topPad = 60;
-        const bottomPad = 60;
-        const availableW = logicWidth - leftPad - rightPad;
-        const availableH = logicHeight - topPad - bottomPad;
+        const logicWidth = 1100;
+        const nodeGap = 65;
+        const leftPad = 90;
+        const rightPad = 90;
+        const topPad = 50;
+        const colSpacing = (logicWidth - leftPad - rightPad) / 3;
+        const totalHeight = maxCount * nodeGap + topPad * 2;
+        const logicHeight = Math.max(600, totalHeight);
 
         for (let s = 0; s < 4; s++) {
             const stageNodes = nodesByStage[s];
             const count = stageNodes.length;
-            const x = leftPad + s * (availableW / 3);
+            const x = leftPad + s * colSpacing;
 
             if (count === 0) continue;
 
-            if (count === 1) {
-                const y = topPad + availableH / 2;
-                positions[stageNodes[0].id] = { x, y };
-            } else {
-                const totalSpacing = availableH * 0.85;
-                const startY = topPad + (availableH - totalSpacing) / 2;
-                const step = totalSpacing / (count - 1);
-                for (let i = 0; i < count; i++) {
-                    const y = startY + i * step;
-                    positions[stageNodes[i].id] = { x, y };
-                }
+            const totalHeightNodes = (count - 1) * nodeGap;
+            const startY = (logicHeight - totalHeightNodes) / 2;
+            for (let i = 0; i < count; i++) {
+                const y = startY + i * nodeGap;
+                positions[stageNodes[i].id] = { x, y };
             }
         }
 
@@ -347,37 +361,38 @@ class Game {
             const pos = positions[node.id];
             const isUnlocked = unlockedSet.has(node.id);
             const isAvailable = availableSet.has(node.id);
+            const stageColor = stageColors[node.stage];
 
             let itemStyle;
             if (isUnlocked) {
                 itemStyle = {
-                    color: branchColor,
+                    color: stageColor,
                     borderColor: '#fff',
-                    borderWidth: 3,
-                    shadowBlur: 20,
-                    shadowColor: branchColor,
+                    borderWidth: 2.5,
+                    shadowBlur: 18,
+                    shadowColor: stageColor,
                 };
             } else if (isAvailable) {
                 itemStyle = {
-                    color: '#1a1a2e',
-                    borderColor: '#ffcc00',
-                    borderWidth: 3,
+                    color: 'rgba(20, 20, 40, 0.9)',
+                    borderColor: stageColor,
+                    borderWidth: 2.5,
                 };
             } else {
                 itemStyle = {
-                    color: '#1a1a2e',
-                    borderColor: '#444',
+                    color: 'rgba(20, 20, 40, 0.6)',
+                    borderColor: 'rgba(100, 100, 120, 0.6)',
                     borderWidth: 1.5,
-                    opacity: 0.5,
+                    opacity: 0.7,
                 };
             }
 
-            const labelColor = isUnlocked ? '#fff' : (isAvailable ? '#ffcc00' : '#666');
-            const labelOpacity = isUnlocked ? 1 : (isAvailable ? 0.9 : 0.4);
+            const labelColor = isUnlocked ? '#fff' : (isAvailable ? stageColor : 'rgba(140, 140, 160, 0.7)');
+            const labelOpacity = isUnlocked ? 1 : (isAvailable ? 1 : 0.5);
 
             data.push({
                 id: node.id,
-                name: node.name.length > 4 ? node.name.slice(0, 4) + '…' : node.name,
+                name: node.name,
                 x: pos.x,
                 y: pos.y,
                 fixed: true,
@@ -385,10 +400,11 @@ class Game {
                 label: {
                     show: true,
                     position: 'bottom',
-                    fontSize: 11,
+                    fontSize: 12,
                     color: labelColor,
                     opacity: labelOpacity,
                     fontWeight: isUnlocked ? 'bold' : 'normal',
+                    distance: 6,
                 },
             });
         }
@@ -403,17 +419,24 @@ class Game {
                 drawn.add(key);
                 if (!positions[preId]) continue;
 
+                const preNode = AITalentTree.nodes[preId];
                 const preUnlocked = unlockedSet.has(preId);
                 const nodeUnlocked = unlockedSet.has(node.id);
+                const preStageColor = preNode ? stageColors[preNode.stage] : branchColor;
 
-                let lineColor = '#333';
-                let lineOpacity = 0.4;
+                let lineColor;
+                let lineOpacity;
+                let lineWidth = 2;
                 if (preUnlocked && nodeUnlocked) {
-                    lineColor = branchColor;
-                    lineOpacity = 0.9;
+                    lineColor = preStageColor;
+                    lineOpacity = 0.85;
+                    lineWidth = 2.5;
                 } else if (preUnlocked || nodeUnlocked) {
-                    lineColor = branchColor;
-                    lineOpacity = 0.3;
+                    lineColor = preStageColor;
+                    lineOpacity = 0.5;
+                } else {
+                    lineColor = 'rgba(100, 100, 130, 0.6)';
+                    lineOpacity = 0.5;
                 }
 
                 links.push({
@@ -422,8 +445,8 @@ class Game {
                     lineStyle: {
                         color: lineColor,
                         opacity: lineOpacity,
-                        width: 2,
-                        curveness: 0.3,
+                        width: lineWidth,
+                        curveness: 0.2,
                     },
                 });
             }
@@ -431,7 +454,7 @@ class Game {
 
         return {
             tooltip: { show: false },
-            animationDuration: 600,
+            animationDuration: 700,
             animationEasingUpdate: 'quinticInOut',
             series: [{
                 type: 'graph',
@@ -439,14 +462,25 @@ class Game {
                 roam: true,
                 zoom: 1,
                 symbol: 'circle',
-                symbolSize: 48,
+                symbolSize: 42,
                 edgeSymbol: ['none', 'arrow'],
-                edgeSymbolSize: 6,
-                emphasis: { focus: 'adjacency' },
+                edgeSymbolSize: 8,
+                emphasis: { focus: 'adjacency', scale: 1.15 },
                 data: data,
                 links: links,
             }]
         };
+    }
+
+    _adjustColor(hex, amount) {
+        const num = parseInt(hex.replace('#', ''), 16);
+        let r = (num >> 16) + amount;
+        let g = ((num >> 8) & 0x00FF) + amount;
+        let b = (num & 0x0000FF) + amount;
+        r = Math.max(0, Math.min(255, r));
+        g = Math.max(0, Math.min(255, g));
+        b = Math.max(0, Math.min(255, b));
+        return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
     }
 
     _showTalentTooltip(nodeId, x, y) {
@@ -727,14 +761,20 @@ class Game {
             if (this.state === GameState.PAUSED) {
                 const minDim = Math.min(this.screenW, this.screenH);
                 const btnW = minDim * 0.45;
-                const btnH = minDim * 0.09;
-                const btnSpacing = minDim * 0.025;
-                const startBtnY = this.screenH / 2 + minDim * 0.02;
-                const menuBtnY = startBtnY + btnH + btnSpacing;
+                const btnH = minDim * 0.08;
+                const btnSpacing = minDim * 0.02;
+                const startBtnY = this.screenH / 2 - minDim * 0.06;
+                const talentBtnY = startBtnY + btnH + btnSpacing;
+                const menuBtnY = talentBtnY + btnH + btnSpacing;
 
                 if (x >= this.screenW / 2 - btnW / 2 && x <= this.screenW / 2 + btnW / 2 &&
                     y >= startBtnY - btnH / 2 && y <= startBtnY + btnH / 2) {
                     this.togglePause();
+                    this.playSound('lCharge');
+                    this.vibrate(15);
+                } else if (x >= this.screenW / 2 - btnW / 2 && x <= this.screenW / 2 + btnW / 2 &&
+                    y >= talentBtnY - btnH / 2 && y <= talentBtnY + btnH / 2) {
+                    this.showTalentTree();
                     this.playSound('lCharge');
                     this.vibrate(15);
                 } else if (x >= this.screenW / 2 - btnW / 2 && x <= this.screenW / 2 + btnW / 2 &&
@@ -1611,11 +1651,12 @@ class Game {
             const minDim = Math.min(w, h);
             const titleSize = minDim * 0.07;
             const btnW = minDim * 0.45;
-            const btnH = minDim * 0.09;
-            const btnSpacing = minDim * 0.025;
-            const titleY = h / 2 - minDim * 0.12;
-            const startBtnY = h / 2 + minDim * 0.02;
-            const menuBtnY = startBtnY + btnH + btnSpacing;
+            const btnH = minDim * 0.08;
+            const btnSpacing = minDim * 0.02;
+            const titleY = h / 2 - minDim * 0.18;
+            const startBtnY = h / 2 - minDim * 0.06;
+            const talentBtnY = startBtnY + btnH + btnSpacing;
+            const menuBtnY = talentBtnY + btnH + btnSpacing;
 
             ctx.fillStyle = '#000';
             ctx.font = `bold ${titleSize}px monospace`;
@@ -1630,6 +1671,13 @@ class Game {
             ctx.fillStyle = '#000';
             ctx.font = `${btnH * 0.4}px monospace`;
             ctx.fillText('继续游戏 (P)', w / 2, startBtnY);
+
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(w / 2 - btnW / 2, talentBtnY - btnH / 2, btnW, btnH);
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#000';
+            ctx.fillText('AI天赋谱', w / 2, talentBtnY);
 
             ctx.globalAlpha = 0.15;
             ctx.fillStyle = '#000';

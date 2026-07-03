@@ -77,14 +77,6 @@ class UI {
             this.game.resetAIGenes();
         });
 
-        document.getElementById('view-talent-tree-btn').addEventListener('click', () => {
-            this.playUISound();
-            this.vibrate(10);
-            this.game.state = GameState.MENU;
-            this.game.demoMode = true;
-            this.game.showTalentTree();
-        });
-
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.playUISound();
