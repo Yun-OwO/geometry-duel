@@ -597,6 +597,17 @@ class Game {
         this.demoMode = false;
         this.state = GameState.PLAYING;
 
+        if (!this.endlessMode || this.endlessRound === 0) {
+            this.aiGenes = {
+                genes: { ...AIGeneDefaults },
+                generation: 0,
+                wins: 0,
+                lastMutations: [],
+                geneVersion: AIMutationConfig.geneVersion,
+            };
+            this.saveAIGenes();
+        }
+
         if (this.gameMode === 'online') {
             if (Network.isHost) {
                 const { seed, playerCount } = Network.startHostGame();
@@ -2210,6 +2221,8 @@ class AIController {
         this.shieldActive = 0;
         this.weavePhase = 0;
         this.genes = genes || { ...AIGeneDefaults };
+        this.trackTimer = 0;
+        this.lastTrackedEnemy = null;
     }
 
     getEffectiveLevel() {
@@ -2296,7 +2309,17 @@ class AIController {
     getInput(ai, dt) {
         if (this.killCooldown > 0) this.killCooldown -= dt;
 
-        const target = this.getNearestEnemy(ai);
+        this.trackTimer += dt;
+        const shouldTrack = this.trackTimer >= 0.05;
+        if (shouldTrack) this.trackTimer = 0;
+
+        let target = null;
+        if (shouldTrack) {
+            target = this.getNearestEnemy(ai);
+        } else {
+            target = this.lastTrackedEnemy;
+        }
+
         if (!target) {
             return {
                 moveX: 0,
@@ -2306,10 +2329,26 @@ class AIController {
             };
         }
 
+        if (shouldTrack) {
+            this.lastTrackedEnemy = target;
+        }
+
         const canUseUltimate = ai.normalShotCount >= CONFIG.AI_ULTIMATE_MIN_JABS;
         let xPressed = this.currentPlan === 'kill' && canUseUltimate;
 
+        const aimAcc = this.getAimAccuracy();
+
+        if (this.currentPlan === 'jab' && shouldTrack) {
+            const toEnemy = Math.atan2(target.y - ai.y, target.x - ai.x);
+            ai.aimAngle = toEnemy + (Math.random() - 0.5) * 0.3 * (1 - aimAcc);
+        }
+
         if (this.currentPlan === 'kill' && canUseUltimate) {
+            if (shouldTrack) {
+                const toEnemy = Math.atan2(target.y - ai.y, target.x - ai.x);
+                ai.aimAngle = toEnemy + (Math.random() - 0.5) * 0.25 * (1 - aimAcc);
+            }
+
             const fullyCharged = ai.chargeTime >= CONFIG.ULTIMATE_CHARGE_TIME;
             if (fullyCharged) {
                 const toEnemy = Math.atan2(target.y - ai.y, target.x - ai.x);
