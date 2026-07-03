@@ -593,7 +593,7 @@ class Game {
         requestAnimationFrame(() => this.loop());
     }
 
-    startGame() {
+    async startGame() {
         this.demoMode = false;
         this.state = GameState.PLAYING;
 
@@ -610,7 +610,7 @@ class Game {
 
         if (this.gameMode === 'online') {
             if (Network.isHost) {
-                const { seed, playerCount } = Network.startHostGame();
+                const { seed, playerCount } = await Network.startHostGame();
                 this.rng = new DeterministicRandom(seed);
                 this.onlinePlayerCount = playerCount;
                 Network.frameSync.game = this;

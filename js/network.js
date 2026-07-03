@@ -170,8 +170,10 @@ class NetworkManager {
             if (!res.ok) throw new Error('创建失败');
             const data = await res.json();
             this.roomCode = data.code;
+            this.maxPlayers = data.maxPlayers || maxPlayers;
         } else {
             this.roomCode = this.generateRoomCode();
+            this.maxPlayers = maxPlayers;
         }
 
         this.knownPlayers = [{ id: 0, name: '你', host: true }];
@@ -276,6 +278,11 @@ class NetworkManager {
                 if (this.knownPlayers.length !== oldLen && this.onPlayerJoin) {
                     this.onPlayerJoin(this.knownPlayers);
                 }
+            }
+
+            // 检测游戏开始
+            if (data.gameStarted && !this.isHost && !this.frameSync) {
+                this.startGameRemote(data.seed, data.playerCount);
             }
 
             if (data.frameInputs && this.frameSync) {
@@ -429,27 +436,26 @@ class NetworkManager {
         }
     }
 
-    startHostGame() {
+    async startHostGame() {
         const seed = Math.floor(Math.random() * 1000000);
         this.rng = new DeterministicRandom(seed);
         this.frameSync = new FrameSync(null, this.maxPlayers, this.playerId);
         this.frameSync.start();
 
-        // 通过WebRTC广播
-        this.broadcast({
-            type: 'gamestart',
-            seed,
-            playerCount: this.maxPlayers,
-        });
-
-        // 同时通过信令服务器发送（作为fallback，防止WebRTC未连接）
-        for (const p of this.knownPlayers) {
-            if (p.id !== this.playerId) {
-                this.sendSignal(p.id, {
-                    type: 'gamestart',
-                    seed,
-                    playerCount: this.maxPlayers,
+        // 通知服务器游戏开始
+        if (this.signalingUrl && this.roomCode) {
+            try {
+                await fetch(`${this.signalingUrl}/api/room/${this.roomCode}/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        seed,
+                        playerCount: this.maxPlayers,
+                        playerId: this.playerId,
+                    }),
                 });
+            } catch (e) {
+                console.warn('Start game server call failed:', e);
             }
         }
 

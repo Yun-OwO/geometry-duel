@@ -317,11 +317,11 @@ class UI {
         }
     }
 
-    startOnlineGame() {
+    async startOnlineGame() {
         if (!Network.isHost) return;
         this.lobbyScreen.classList.add('hidden');
         this.game.gameMode = 'online';
-        this.game.startGame();
+        await this.game.startGame();
     }
 }
 

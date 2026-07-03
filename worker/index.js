@@ -66,6 +66,11 @@ export default {
                 return this.sendInput(code, request, env);
             }
 
+            if (path.startsWith('/api/room/') && path.endsWith('/start') && request.method === 'POST') {
+                const code = path.split('/')[3];
+                return this.startGame(code, request, env);
+            }
+
             if (path.startsWith('/api/room/') && path.endsWith('/poll') && request.method === 'GET') {
                 const code = path.split('/')[3];
                 return this.pollSignals(code, request, env);
@@ -216,6 +221,31 @@ export default {
         return jsonResponse({ ok: true });
     },
 
+    async startGame(code, request, env) {
+        code = code.toUpperCase();
+        const body = await request.json().catch(() => ({}));
+        const { seed, playerCount, playerId } = body;
+
+        if (seed === undefined || playerCount === undefined) {
+            return jsonResponse({ error: 'Invalid start data' }, 400);
+        }
+
+        const roomData = await env.ROOM_KV.get(code);
+        if (!roomData) {
+            return jsonResponse({ error: '房间不存在' }, 404);
+        }
+
+        const room = JSON.parse(roomData);
+        room.gameStarted = true;
+        room.seed = seed;
+        room.playerCount = playerCount;
+        room.startedAt = Date.now();
+
+        await env.ROOM_KV.put(code, JSON.stringify(room), { expirationTtl: ROOM_TTL });
+
+        return jsonResponse({ ok: true });
+    },
+
     async pollSignals(code, request, env) {
         code = code.toUpperCase();
         const url = new URL(request.url);
@@ -256,6 +286,9 @@ export default {
             players: room.players.map(p => ({ id: p.id, name: p.name, host: p.host })),
             frameInputs,
             inputSince: maxInputFrame,
+            gameStarted: room.gameStarted || false,
+            seed: room.seed,
+            playerCount: room.playerCount,
         });
     },
 
