@@ -272,12 +272,39 @@ class Game {
         if (this.talentChart) {
             const chartDom = document.getElementById('talent-tree-chart');
             const rect = chartDom.getBoundingClientRect();
-            const option = this._buildTalentTreeOption(branch, rect.width, rect.height);
+            const option = this._buildTalentTreeOption(branch);
             this.talentChart.setOption(option, true);
+
+            const seriesData = option.series[0].data;
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (const n of seriesData) {
+                if (n.x < minX) minX = n.x;
+                if (n.x > maxX) maxX = n.x;
+                if (n.y < minY) minY = n.y;
+                if (n.y > maxY) maxY = n.y;
+            }
+            const contentW = maxX - minX + 240;
+            const contentH = maxY - minY + 200;
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+            const scaleX = rect.width / contentW;
+            const scaleY = rect.height / contentH;
+            const zoom = Math.min(scaleX, scaleY) * 0.8;
+
+            setTimeout(() => {
+                if (this.talentChart) {
+                    this.talentChart.setOption({
+                        series: [{
+                            zoom: zoom,
+                            center: [centerX, centerY],
+                        }]
+                    });
+                }
+            }, 30);
         }
     }
 
-    _buildTalentTreeOption(branch, viewW, viewH) {
+    _buildTalentTreeOption(branch) {
         const branchNodes = getTalentNodesByBranch(branch);
         const unlockedSet = new Set(this.aiGenes.unlockedTalents || []);
         const availableTalents = getAvailableTalents(unlockedSet, this.aiGenes.maxUnlockedStage || 0);
@@ -304,12 +331,12 @@ class Game {
         }
 
         const positions = {};
-        const nodeGap = 90;
-        const leftPad = 100;
-        const rightPad = 100;
-        const topPad = 80;
-        const bottomPad = 80;
-        const colSpacing = 280;
+        const nodeGap = 150;
+        const leftPad = 120;
+        const rightPad = 120;
+        const topPad = 100;
+        const bottomPad = 100;
+        const colSpacing = 380;
         const logicWidth = leftPad + 3 * colSpacing + rightPad;
         const logicHeight = topPad + (maxCount - 1) * nodeGap + bottomPad;
 
@@ -328,14 +355,8 @@ class Game {
             }
         }
 
-        let initZoom = 1;
-        let initCenter = [logicWidth / 2, logicHeight / 2];
-        if (viewW && viewH) {
-            const scaleX = viewW / logicWidth;
-            const scaleY = viewH / logicHeight;
-            initZoom = Math.min(scaleX, scaleY) * 0.9;
-            initCenter = [logicWidth / 2, logicHeight / 2];
-        }
+        const initZoom = 0.8;
+        const initCenter = [logicWidth / 2, logicHeight / 2];
 
         const data = [];
         for (const node of branchNodes) {
