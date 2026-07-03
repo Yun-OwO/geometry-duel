@@ -21,9 +21,11 @@ class Game {
 
         // 天赋树查看器状态
         this.talentTreeView = false; // 是否显示天赋树查看器
-        this.talentTreeScroll = 0; // 天赋树滚动偏移
+        this.talentTreeScroll = { x: 0, y: 0 }; // 天赋树平移偏移
         this.talentTreeBranch = 'attack'; // 当前查看的分支
         this.talentTreeStageFilter = -1; // -1=全部, 0-3=筛选阶段
+        this.talentTreeSelectedNode = null; // 当前选中的节点
+        this.talentTreeDragStart = null; // 拖拽起始坐标
 
         this.setupCanvas();
         this.initInput();
@@ -364,7 +366,9 @@ class Game {
 
             // 天赋树查看器触摸事件
             if (this.talentTreeView) {
+                this._lastTouchX = x;
                 this._lastTouchY = y;
+                this._talentTreeTouchMoved = false;
                 this._handleTalentTreeTouch(x, y);
                 continue;
             }
@@ -398,7 +402,8 @@ class Game {
                     if (x >= this.screenW / 2 - talentBtnW / 2 && x <= this.screenW / 2 + talentBtnW / 2 &&
                         y >= talentBtnY - talentBtnH / 2 && y <= talentBtnY + talentBtnH / 2) {
                         this.talentTreeView = true;
-                        this.talentTreeScroll = 0;
+                        this.talentTreeScroll = { x: 0, y: 0 };
+                        this.talentTreeSelectedNode = null;
                         this.playSound('lCharge');
                         this.vibrate(15);
                         continue;
@@ -483,10 +488,16 @@ class Game {
             const y = t.clientY;
             const id = t.identifier;
 
-            // 天赋树查看器滚动
+            // 天赋树查看器平移
             if (this.talentTreeView) {
+                const dx = x - (this._lastTouchX || x);
                 const dy = y - (this._lastTouchY || y);
-                this.talentTreeScroll += dy;
+                if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+                    this._talentTreeTouchMoved = true;
+                }
+                this.talentTreeScroll.x += dx;
+                this.talentTreeScroll.y += dy;
+                this._lastTouchX = x;
                 this._lastTouchY = y;
                 continue;
             }
@@ -1187,7 +1198,6 @@ class Game {
         const w = this.screenW;
         const h = this.screenH;
         const minDim = Math.min(w, h);
-        const dpr = this.dpr;
 
         // 底部返回按钮
         const backBtnW = minDim * 0.35;
@@ -1199,6 +1209,29 @@ class Game {
             this.playSound('lCharge');
             this.vibrate(15);
             return;
+        }
+
+        // 如果有选中节点，先检查是否点击了弹窗的关闭区域
+        if (this.talentTreeSelectedNode) {
+            const popupW = minDim * 0.7;
+            const popupH = minDim * 0.4;
+            const popupX = w / 2 - popupW / 2;
+            const popupY = h / 2 - popupH / 2;
+            const closeBtnR = minDim * 0.03;
+            const closeX = popupX + popupW - closeBtnR;
+            const closeY = popupY + closeBtnR;
+            const dx = x - closeX;
+            const dy = y - closeY;
+            if (dx * dx + dy * dy <= closeBtnR * closeBtnR) {
+                this.talentTreeSelectedNode = null;
+                this.vibrate(5);
+                return;
+            }
+            if (x >= popupX && x <= popupX + popupW &&
+                y >= popupY && y <= popupY + popupH) {
+                return;
+            }
+            this.talentTreeSelectedNode = null;
         }
 
         // 分支标签按钮（5个分支）
@@ -1213,30 +1246,104 @@ class Game {
             if (x >= bx && x <= bx + branchBtnW &&
                 y >= branchBtnY && y <= branchBtnY + branchBtnH) {
                 this.talentTreeBranch = branchKeys[i];
-                this.talentTreeScroll = 0;
+                this.talentTreeScroll = { x: 0, y: 0 };
+                this.talentTreeSelectedNode = null;
                 this.vibrate(8);
                 return;
             }
         }
 
-        // 阶段筛选按钮（4个阶段 + 1个全部）
-        const stageBtnW = minDim * 0.12;
-        const stageBtnH = minDim * 0.045;
-        const stageBtnY = branchBtnY + branchBtnH + minDim * 0.015;
-        const stageKeys = [-1, 0, 1, 2, 3];
-        const stageLabels = ['全部', 'S0', 'S1', 'S2', 'S3'];
-        const totalStageW = stageKeys.length * stageBtnW + (stageKeys.length - 1) * minDim * 0.01;
-        const stageStartX = w / 2 - totalStageW / 2;
-        for (let i = 0; i < stageKeys.length; i++) {
-            const sx = stageStartX + i * (stageBtnW + minDim * 0.01);
-            if (x >= sx && x <= sx + stageBtnW &&
-                y >= stageBtnY && y <= stageBtnY + stageBtnH) {
-                this.talentTreeStageFilter = stageKeys[i];
-                this.talentTreeScroll = 0;
-                this.vibrate(8);
+        // 如果触摸发生了移动，视为拖拽，不处理点击
+        if (this._talentTreeTouchMoved) return;
+
+        // 检测节点点击
+        const layout = this._computeTalentTreeLayout();
+        const scrollX = this.talentTreeScroll.x;
+        const scrollY = this.talentTreeScroll.y;
+        const nodeR = layout.nodeRadius;
+
+        for (const nodeId in layout.positions) {
+            const pos = layout.positions[nodeId];
+            const screenX = pos.x + scrollX;
+            const screenY = pos.y + scrollY;
+            const dx = x - screenX;
+            const dy = y - screenY;
+            if (dx * dx + dy * dy <= nodeR * nodeR * 1.2) {
+                this.talentTreeSelectedNode = nodeId;
+                this.playSound('lCharge');
+                this.vibrate(10);
                 return;
             }
         }
+    }
+
+    // 计算天赋树节点布局位置
+    _computeTalentTreeLayout() {
+        const w = this.screenW;
+        const h = this.screenH;
+        const minDim = Math.min(w, h);
+
+        const branchBtnY = minDim * 0.15;
+        const branchBtnH = minDim * 0.055;
+        const backBtnY = h - minDim * 0.12;
+
+        const leftPad = 60;
+        const rightPad = 60;
+        const topPad = branchBtnY + branchBtnH + minDim * 0.03;
+        const bottomPad = backBtnY - minDim * 0.03;
+
+        const availableW = w - leftPad - rightPad;
+        const availableH = bottomPad - topPad;
+
+        const numStages = 4;
+        const colSpacing = availableW / (numStages - 1);
+        const nodeRadius = Math.max(18, minDim * 0.032);
+
+        const branchNodes = getTalentNodesByBranch(this.talentTreeBranch);
+        const nodesByStage = {};
+        for (let s = 0; s < numStages; s++) nodesByStage[s] = [];
+        for (const node of branchNodes) {
+            if (nodesByStage[node.stage]) {
+                nodesByStage[node.stage].push(node);
+            }
+        }
+
+        for (let s = 0; s < numStages; s++) {
+            nodesByStage[s].sort((a, b) => a.id.localeCompare(b.id));
+        }
+
+        const positions = {};
+
+        for (let s = 0; s < numStages; s++) {
+            const stageNodes = nodesByStage[s];
+            const count = stageNodes.length;
+            const colX = leftPad + s * colSpacing;
+
+            if (count === 0) continue;
+
+            if (count === 1) {
+                const y = topPad + availableH / 2;
+                positions[stageNodes[0].id] = { x: colX, y: y, node: stageNodes[0] };
+            } else {
+                const totalSpacing = availableH * 0.85;
+                const startY = topPad + (availableH - totalSpacing) / 2;
+                const step = totalSpacing / (count - 1);
+                for (let i = 0; i < count; i++) {
+                    const y = startY + i * step;
+                    positions[stageNodes[i].id] = { x: colX, y: y, node: stageNodes[i] };
+                }
+            }
+        }
+
+        return {
+            positions: positions,
+            nodeRadius: nodeRadius,
+            leftPad: leftPad,
+            rightPad: rightPad,
+            topPad: topPad,
+            bottomPad: bottomPad,
+            colSpacing: colSpacing
+        };
     }
 
     // 绘制天赋树查看器
@@ -1252,6 +1359,27 @@ class Game {
         // 背景
         ctx.fillStyle = '#0d0d1a';
         ctx.fillRect(0, 0, w, h);
+
+        // 背景装饰网格
+        ctx.globalAlpha = 0.03;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        const gridSize = 40 * dpr;
+        const gridOffsetX = (this.talentTreeScroll.x * dpr) % gridSize;
+        const gridOffsetY = (this.talentTreeScroll.y * dpr) % gridSize;
+        for (let gx = gridOffsetX; gx < w; gx += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(gx, 0);
+            ctx.lineTo(gx, h);
+            ctx.stroke();
+        }
+        for (let gy = gridOffsetY; gy < h; gy += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(0, gy);
+            ctx.lineTo(w, gy);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
 
         // 标题
         const stageName = AITalentTree.stages[this.aiGenes.maxUnlockedStage || 0].name;
@@ -1279,72 +1407,30 @@ class Game {
             const bh = branchBtnH * dpr;
             const isActive = this.talentTreeBranch === key;
 
-            // 按钮背景
             ctx.globalAlpha = isActive ? 0.6 : 0.15;
             ctx.fillStyle = branch.color;
             ctx.fillRect(bx, by, bw, bh);
-            // 边框
             if (isActive) {
                 ctx.globalAlpha = 1;
                 ctx.strokeStyle = branch.color;
                 ctx.lineWidth = 2 * dpr;
                 ctx.strokeRect(bx, by, bw, bh);
             }
-            // 文字
             ctx.globalAlpha = isActive ? 1 : 0.6;
             ctx.fillStyle = '#fff';
             ctx.font = `${bh * 0.4}px monospace`;
             ctx.fillText(branch.name, bx + bw / 2, by + bh / 2);
         }
 
-        // 阶段筛选按钮
-        const stageBtnW = minDim * 0.12;
-        const stageBtnH = minDim * 0.045;
-        const stageBtnY = branchBtnY + branchBtnH + minDim * 0.015;
-        const stageKeys = [-1, 0, 1, 2, 3];
-        const stageLabels = ['全部', 'S0', 'S1', 'S2', 'S3'];
-        const stageSpacing = minDim * 0.01;
-        const totalStageW = stageKeys.length * stageBtnW + (stageKeys.length - 1) * stageSpacing;
-        const stageStartX = sw / 2 - totalStageW / 2;
-        for (let i = 0; i < stageKeys.length; i++) {
-            const sx = (stageStartX + i * (stageBtnW + stageSpacing)) * dpr;
-            const sy = stageBtnY * dpr;
-            const sbw = stageBtnW * dpr;
-            const sbh = stageBtnH * dpr;
-            const isStageActive = this.talentTreeStageFilter === stageKeys[i];
+        ctx.globalAlpha = 1;
 
-            ctx.globalAlpha = isStageActive ? 0.5 : 0.1;
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(sx, sy, sbw, sbh);
-            if (isStageActive) {
-                ctx.globalAlpha = 1;
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 1.5 * dpr;
-                ctx.strokeRect(sx, sy, sbw, sbh);
-            }
-            ctx.globalAlpha = isStageActive ? 1 : 0.5;
-            ctx.fillStyle = '#fff';
-            ctx.font = `${sbh * 0.4}px monospace`;
-            ctx.fillText(stageLabels[i], sx + sbw / 2, sy + sbh / 2);
-        }
-
-        // 获取当前分支和筛选的节点
-        const branchNodes = getTalentNodesByBranch(this.talentTreeBranch);
-        const displayNodes = this.talentTreeStageFilter >= 0
-            ? branchNodes.filter(n => n.stage === this.talentTreeStageFilter)
-            : branchNodes;
-        // 按阶段排序
-        displayNodes.sort((a, b) => a.stage - b.stage || a.name.localeCompare(b.name));
-
-        // 计算滚动边界
-        const listTop = (stageBtnY + stageBtnH + minDim * 0.02) * dpr;
-        const listBottom = (sh - minDim * 0.18) * dpr;
-        const nodeCardH = minDim * 0.095 * dpr;
-        const nodeCardSpacing = minDim * 0.01 * dpr;
-        const contentHeight = displayNodes.length * (nodeCardH + nodeCardSpacing);
-        const maxScroll = Math.min(0, -(contentHeight - (listBottom - listTop)));
-        if (this.talentTreeScroll > 0) this.talentTreeScroll = 0;
-        if (this.talentTreeScroll < maxScroll) this.talentTreeScroll = maxScroll;
+        // 计算节点布局
+        const layout = this._computeTalentTreeLayout();
+        const positions = layout.positions;
+        const nodeR = layout.nodeRadius;
+        const scrollX = this.talentTreeScroll.x;
+        const scrollY = this.talentTreeScroll.y;
+        const branchColor = AITalentTree.branches[this.talentTreeBranch].color;
 
         const unlockedSet = new Set(this.aiGenes.unlockedTalents || []);
         const availableSet = new Set();
@@ -1353,105 +1439,155 @@ class Game {
             for (const at of availableTalents) availableSet.add(at.id);
         }
 
-        // 节点列表区域
-        const nodeCardW = (sw - minDim * 0.08) * dpr;
-        const nodeCardX = (sw / 2 - (sw - minDim * 0.08) / 2) * dpr;
-        const branchColor = AITalentTree.branches[this.talentTreeBranch].color;
+        // 阶段标签（竖排，在每列顶部）
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = '#888';
+        ctx.font = `${minDim * 0.025 * dpr}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        for (let s = 0; s < 4; s++) {
+            const colX = (layout.leftPad + s * layout.colSpacing + scrollX) * dpr;
+            const labelY = (layout.topPad - minDim * 0.01 + scrollY) * dpr;
+            const stageInfo = AITalentTree.stages[s];
+            ctx.fillText(`S${s} · ${stageInfo.name}`, colX, labelY);
+        }
+        ctx.globalAlpha = 1;
 
-        // 绘制节点
-        for (let i = 0; i < displayNodes.length; i++) {
-            const node = displayNodes[i];
-            let cardY = listTop + i * (nodeCardH + nodeCardSpacing) + this.talentTreeScroll * dpr;
-            // 跳过不可见的节点
-            if (cardY + nodeCardH < listTop || cardY > listBottom) continue;
+        // 绘制连线（贝塞尔曲线）
+        const drawnConnections = new Set();
+        for (const nodeId in positions) {
+            const pos = positions[nodeId];
+            const node = pos.node;
+            const prereqs = node.prerequisites || [];
+            for (const preId of prereqs) {
+                const connKey = preId + '->' + nodeId;
+                if (drawnConnections.has(connKey)) continue;
+                drawnConnections.add(connKey);
+                if (!positions[preId]) continue;
 
-            const isUnlocked = unlockedSet.has(node.id);
-            const isAvailable = availableSet.has(node.id);
+                const prePos = positions[preId];
+                const x1 = (prePos.x + scrollX + nodeR) * dpr;
+                const y1 = (prePos.y + scrollY) * dpr;
+                const x2 = (pos.x + scrollX - nodeR) * dpr;
+                const y2 = (pos.y + scrollY) * dpr;
 
-            // 卡片背景
-            ctx.globalAlpha = 1;
-            if (isUnlocked) {
-                // 已解锁：亮色背景
-                ctx.fillStyle = branchColor + '30';
-                ctx.fillRect(nodeCardX, cardY, nodeCardW, nodeCardH);
-                ctx.strokeStyle = branchColor;
-                ctx.lineWidth = 2 * dpr;
-                ctx.strokeRect(nodeCardX, cardY, nodeCardW, nodeCardH);
-                // 左侧标记条
-                ctx.fillStyle = branchColor;
-                ctx.fillRect(nodeCardX, cardY, 4 * dpr, nodeCardH);
-            } else if (isAvailable) {
-                // 可解锁：黄色边框
-                ctx.fillStyle = '#1a1a2e';
-                ctx.fillRect(nodeCardX, cardY, nodeCardW, nodeCardH);
-                ctx.strokeStyle = '#ffcc00';
-                ctx.lineWidth = 1.5 * dpr;
-                ctx.strokeRect(nodeCardX, cardY, nodeCardW, nodeCardH);
-                ctx.fillStyle = '#ffcc00';
-                ctx.fillRect(nodeCardX, cardY, 4 * dpr, nodeCardH);
-            } else {
-                // 锁定：灰色
-                ctx.fillStyle = '#1a1a2e';
-                ctx.fillRect(nodeCardX, cardY, nodeCardW, nodeCardH);
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 1 * dpr;
-                ctx.strokeRect(nodeCardX, cardY, nodeCardW, nodeCardH);
-                ctx.fillStyle = '#333';
-                ctx.fillRect(nodeCardX, cardY, 4 * dpr, nodeCardH);
-            }
+                const preUnlocked = unlockedSet.has(preId);
+                const nodeUnlocked = unlockedSet.has(nodeId);
 
-            // 节点名称
-            ctx.globalAlpha = isUnlocked ? 1 : (isAvailable ? 0.85 : 0.35);
-            ctx.fillStyle = isUnlocked ? branchColor : (isAvailable ? '#ffcc00' : '#666');
-            ctx.font = `bold ${nodeCardH * 0.28}px monospace`;
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'top';
-            ctx.fillText(node.name, nodeCardX + 12 * dpr, cardY + nodeCardH * 0.12);
-
-            // 阶段标签
-            ctx.globalAlpha = isUnlocked ? 0.7 : 0.3;
-            ctx.fillStyle = '#888';
-            ctx.font = `${nodeCardH * 0.2}px monospace`;
-            ctx.fillText(`阶段${node.stage}`, nodeCardX + 12 * dpr, cardY + nodeCardH * 0.48);
-
-            // 描述
-            ctx.globalAlpha = isUnlocked ? 0.8 : (isAvailable ? 0.6 : 0.25);
-            ctx.fillStyle = isUnlocked ? '#ccc' : (isAvailable ? '#aaa' : '#555');
-            ctx.font = `${nodeCardH * 0.2}px monospace`;
-            const maxDescW = nodeCardW - 24 * dpr;
-            let desc = node.desc;
-            if (ctx.measureText(desc).width > maxDescW) {
-                while (ctx.measureText(desc + '...').width > maxDescW && desc.length > 0) {
-                    desc = desc.slice(0, -1);
+                let lineColor = '#333';
+                let lineAlpha = 0.4;
+                if (preUnlocked && nodeUnlocked) {
+                    lineColor = branchColor;
+                    lineAlpha = 0.9;
+                } else if (preUnlocked || nodeUnlocked) {
+                    lineColor = branchColor;
+                    lineAlpha = 0.3;
                 }
-                desc += '...';
-            }
-            ctx.fillText(desc, nodeCardX + 12 * dpr, cardY + nodeCardH * 0.68);
 
-            // 状态标记
-            if (isUnlocked) {
-                ctx.globalAlpha = 1;
-                ctx.fillStyle = branchColor;
-                ctx.font = `bold ${nodeCardH * 0.22}px monospace`;
-                ctx.textAlign = 'right';
-                ctx.fillText('已解锁', nodeCardX + nodeCardW - 12 * dpr, cardY + nodeCardH * 0.18);
-            } else if (isAvailable) {
-                ctx.globalAlpha = 0.8;
-                ctx.fillStyle = '#ffcc00';
-                ctx.font = `${nodeCardH * 0.2}px monospace`;
-                ctx.textAlign = 'right';
-                ctx.fillText('可解锁', nodeCardX + nodeCardW - 12 * dpr, cardY + nodeCardH * 0.18);
-            } else {
-                ctx.globalAlpha = 0.3;
-                ctx.fillStyle = '#555';
-                ctx.font = `${nodeCardH * 0.2}px monospace`;
-                ctx.textAlign = 'right';
-                ctx.fillText('锁定', nodeCardX + nodeCardW - 12 * dpr, cardY + nodeCardH * 0.18);
+                const midX = (x1 + x2) / 2;
+                const cpOffset = Math.abs(x2 - x1) * 0.4;
+
+                ctx.globalAlpha = lineAlpha;
+                ctx.strokeStyle = lineColor;
+                ctx.lineWidth = 2 * dpr;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.bezierCurveTo(x1 + cpOffset, y1, x2 - cpOffset, y2, x2, y2);
+                ctx.stroke();
             }
         }
+        ctx.globalAlpha = 1;
+
+        // 绘制节点
+        const pulsePhase = (this.frameCount % 60) / 60;
+        const pulseScale = 1 + Math.sin(pulsePhase * Math.PI * 2) * 0.08;
+
+        for (const nodeId in positions) {
+            const pos = positions[nodeId];
+            const cx = (pos.x + scrollX) * dpr;
+            const cy = (pos.y + scrollY) * dpr;
+            const r = nodeR * dpr;
+
+            const isUnlocked = unlockedSet.has(nodeId);
+            const isAvailable = availableSet.has(nodeId);
+            const isSelected = this.talentTreeSelectedNode === nodeId;
+
+            // 发光效果（已解锁）
+            if (isUnlocked) {
+                const glowR = r * 1.8;
+                const gradient = ctx.createRadialGradient(cx, cy, r * 0.5, cx, cy, glowR);
+                gradient.addColorStop(0, branchColor + '80');
+                gradient.addColorStop(1, branchColor + '00');
+                ctx.globalAlpha = 0.6;
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 脉动光圈（可解锁）
+            if (isAvailable) {
+                const pulseR = r * pulseScale * 1.3;
+                ctx.globalAlpha = 0.3 + Math.sin(pulsePhase * Math.PI * 2) * 0.2;
+                ctx.strokeStyle = '#ffcc00';
+                ctx.lineWidth = 2 * dpr;
+                ctx.beginPath();
+                ctx.arc(cx, cy, pulseR, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // 选中高亮
+            if (isSelected) {
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3 * dpr;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r * 1.2, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // 节点主体圆
+            ctx.globalAlpha = 1;
+            if (isUnlocked) {
+                ctx.fillStyle = branchColor;
+            } else if (isAvailable) {
+                ctx.fillStyle = '#1a1a2e';
+            } else {
+                ctx.fillStyle = '#1a1a2e';
+                ctx.globalAlpha = 0.5;
+            }
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 边框
+            ctx.globalAlpha = 1;
+            if (isUnlocked) {
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2 * dpr;
+            } else if (isAvailable) {
+                ctx.strokeStyle = '#ffcc00';
+                ctx.lineWidth = 2.5 * dpr;
+            } else {
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 1.5 * dpr;
+            }
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 节点内文字（阶段 + 缩写）
+            ctx.globalAlpha = isUnlocked ? 1 : (isAvailable ? 0.9 : 0.4);
+            ctx.fillStyle = isUnlocked ? '#fff' : (isAvailable ? '#ffcc00' : '#666');
+            ctx.font = `bold ${r * 0.6}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('S' + pos.node.stage, cx, cy);
+        }
+
+        ctx.globalAlpha = 1;
 
         // 底部返回按钮
-        ctx.globalAlpha = 1;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const backBtnW = minDim * 0.35;
@@ -1468,6 +1604,161 @@ class Game {
         ctx.fillStyle = '#fff';
         ctx.font = `${backBtnH * 0.4 * dpr}px monospace`;
         ctx.fillText('返回', sw / 2 * dpr, backBtnY * dpr + backBtnH * dpr / 2);
+
+        // 节点详情弹窗
+        if (this.talentTreeSelectedNode) {
+            const selectedNode = AITalentTree.nodes[this.talentTreeSelectedNode];
+            if (selectedNode) {
+                const popupW = minDim * 0.7;
+                const popupH = minDim * 0.45;
+                const popupX = sw / 2 - popupW / 2;
+                const popupY = sh / 2 - popupH / 2;
+
+                // 弹窗背景
+                ctx.globalAlpha = 0.95;
+                ctx.fillStyle = '#0d0d1a';
+                ctx.fillRect(popupX * dpr, popupY * dpr, popupW * dpr, popupH * dpr);
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = branchColor;
+                ctx.lineWidth = 2 * dpr;
+                ctx.strokeRect(popupX * dpr, popupY * dpr, popupW * dpr, popupH * dpr);
+
+                // 关闭按钮
+                const closeBtnR = minDim * 0.03;
+                const closeX = popupX + popupW - closeBtnR;
+                const closeY = popupY + closeBtnR;
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(closeX * dpr, closeY * dpr, closeBtnR * dpr, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5 * dpr;
+                ctx.beginPath();
+                ctx.arc(closeX * dpr, closeY * dpr, closeBtnR * dpr, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.font = `${closeBtnR * dpr}px monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('×', closeX * dpr, closeY * dpr);
+
+                const isUnlocked = unlockedSet.has(selectedNode.id);
+                const isAvailable = availableSet.has(selectedNode.id);
+
+                // 节点名称
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = isUnlocked ? branchColor : (isAvailable ? '#ffcc00' : '#888');
+                ctx.font = `bold ${minDim * 0.035 * dpr}px monospace`;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillText(selectedNode.name, (popupX + minDim * 0.04) * dpr, (popupY + minDim * 0.04) * dpr);
+
+                // 阶段标签
+                ctx.globalAlpha = 0.7;
+                ctx.fillStyle = '#aaa';
+                ctx.font = `${minDim * 0.022 * dpr}px monospace`;
+                ctx.fillText(
+                    `阶段${selectedNode.stage} · ${AITalentTree.stages[selectedNode.stage].name}`,
+                    (popupX + minDim * 0.04) * dpr,
+                    (popupY + minDim * 0.09) * dpr
+                );
+
+                // 状态
+                const statusY = popupY + minDim * 0.13;
+                if (isUnlocked) {
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = branchColor;
+                    ctx.font = `bold ${minDim * 0.025 * dpr}px monospace`;
+                    ctx.fillText('● 已解锁', (popupX + minDim * 0.04) * dpr, statusY * dpr);
+                } else if (isAvailable) {
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = '#ffcc00';
+                    ctx.font = `bold ${minDim * 0.025 * dpr}px monospace`;
+                    ctx.fillText('○ 可解锁', (popupX + minDim * 0.04) * dpr, statusY * dpr);
+                } else {
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillStyle = '#666';
+                    ctx.font = `${minDim * 0.025 * dpr}px monospace`;
+                    ctx.fillText('◌ 锁定', (popupX + minDim * 0.04) * dpr, statusY * dpr);
+                }
+
+                // 分隔线
+                const lineY = popupY + minDim * 0.18;
+                ctx.globalAlpha = 0.2;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1 * dpr;
+                ctx.beginPath();
+                ctx.moveTo((popupX + minDim * 0.04) * dpr, lineY * dpr);
+                ctx.lineTo((popupX + popupW - minDim * 0.04) * dpr, lineY * dpr);
+                ctx.stroke();
+
+                // 描述
+                ctx.globalAlpha = 0.85;
+                ctx.fillStyle = '#ddd';
+                ctx.font = `${minDim * 0.023 * dpr}px monospace`;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+
+                const descX = popupX + minDim * 0.04;
+                const descY = popupY + minDim * 0.21;
+                const descMaxW = popupW - minDim * 0.08;
+                const words = selectedNode.desc;
+                let line = '';
+                let lineCount = 0;
+                let currentY = descY;
+                const lineHeight = minDim * 0.032;
+                const maxLines = 5;
+
+                for (let ci = 0; ci < words.length; ci++) {
+                    const testLine = line + words[ci];
+                    if (ctx.measureText(testLine).width > descMaxW * dpr && line !== '') {
+                        if (lineCount >= maxLines - 1) {
+                            while (ctx.measureText(line + '...').width > descMaxW * dpr && line.length > 0) {
+                                line = line.slice(0, -1);
+                            }
+                            line += '...';
+                            ctx.fillText(line, descX * dpr, currentY * dpr);
+                            lineCount++;
+                            break;
+                        }
+                        ctx.fillText(line, descX * dpr, currentY * dpr);
+                        line = words[ci];
+                        currentY += lineHeight;
+                        lineCount++;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                if (line !== '' && lineCount < maxLines) {
+                    ctx.fillText(line, descX * dpr, currentY * dpr);
+                }
+
+                // 前置节点
+                if (selectedNode.prerequisites && selectedNode.prerequisites.length > 0) {
+                    const prereqY = popupY + popupH - minDim * 0.06;
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillStyle = '#888';
+                    ctx.font = `${minDim * 0.02 * dpr}px monospace`;
+                    let prereqText = '前置: ';
+                    for (let pi = 0; pi < selectedNode.prerequisites.length; pi++) {
+                        const preNode = AITalentTree.nodes[selectedNode.prerequisites[pi]];
+                        if (preNode) {
+                            if (pi > 0) prereqText += ', ';
+                            prereqText += preNode.name;
+                        }
+                    }
+                    if (ctx.measureText(prereqText).width > descMaxW * dpr) {
+                        while (ctx.measureText(prereqText + '...').width > descMaxW * dpr && prereqText.length > 0) {
+                            prereqText = prereqText.slice(0, -1);
+                        }
+                        prereqText += '...';
+                    }
+                    ctx.fillText(prereqText, descX * dpr, prereqY * dpr);
+                }
+            }
+        }
 
         ctx.globalAlpha = 1;
     }

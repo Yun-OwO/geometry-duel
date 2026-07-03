@@ -81,6 +81,8 @@ class UI {
             this.playUISound();
             this.vibrate(10);
             this.game.talentTreeView = true;
+            this.game.talentTreeScroll = { x: 0, y: 0 };
+            this.game.talentTreeSelectedNode = null;
             this.showAIModeScreen();
             this.game.state = GameState.MENU;
             this.game.demoMode = true;
