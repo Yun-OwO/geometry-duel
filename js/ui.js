@@ -71,6 +71,12 @@ class UI {
             this.startAIGame();
         });
 
+        document.getElementById('reset-ai-genes-btn').addEventListener('click', () => {
+            this.playUISound();
+            this.vibrate(10);
+            this.game.resetAIGenes();
+        });
+
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.playUISound();

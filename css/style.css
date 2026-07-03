@@ -414,6 +414,27 @@ html, body {
     cursor: not-allowed;
 }
 
+.secondary-btn {
+    width: 100%;
+    background: transparent;
+    border: 2px solid var(--border);
+    color: var(--fg);
+    padding: 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    margin-bottom: 16px;
+}
+
+.secondary-btn:hover {
+    background: var(--fg);
+    color: #000;
+}
+
 .room-status {
     margin-top: 20px;
     text-align: center;

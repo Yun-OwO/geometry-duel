@@ -34,11 +34,25 @@ class Game {
             const saved = localStorage.getItem('geometryDuelAIGenes');
             if (saved) {
                 const data = JSON.parse(saved);
+                if (data.geneVersion !== AIMutationConfig.geneVersion) {
+                    return {
+                        genes: { ...AIGeneDefaults },
+                        generation: 0,
+                        wins: 0,
+                        lastMutations: [],
+                        geneVersion: AIMutationConfig.geneVersion,
+                    };
+                }
+                const genes = { ...AIGeneDefaults };
+                for (const key in AIGeneDefaults) {
+                    genes[key] = data.genes && data.genes[key] !== undefined ? data.genes[key] : AIGeneDefaults[key];
+                }
                 return {
-                    genes: data.genes || { ...AIGeneDefaults },
+                    genes: genes,
                     generation: data.generation || 0,
                     wins: data.wins || 0,
                     lastMutations: data.lastMutations || [],
+                    geneVersion: AIMutationConfig.geneVersion,
                 };
             }
         } catch (e) {}
@@ -47,6 +61,7 @@ class Game {
             generation: 0,
             wins: 0,
             lastMutations: [],
+            geneVersion: AIMutationConfig.geneVersion,
         };
     }
 
@@ -127,6 +142,7 @@ class Game {
             generation: 0,
             wins: 0,
             lastMutations: [],
+            geneVersion: AIMutationConfig.geneVersion,
         };
         this.saveAIGenes();
     }

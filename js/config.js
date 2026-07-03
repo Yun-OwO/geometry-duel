@@ -148,4 +148,5 @@ const AIMutationConfig = {
     maxMutations: 2,
     typeGeneChance: 0.5,
     strategyMutationChance: 0.3,
+    geneVersion: 2,
 };
