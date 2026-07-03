@@ -206,7 +206,7 @@ class Game {
         this.talentChart = echarts.init(chartDom);
 
         this.talentChart.on('mouseover', (params) => {
-            if (params.dataType === 'node') {
+            if (params.dataType === 'node' && params.data.id && !params.data.id.startsWith('_stage_bg_')) {
                 const rect = chartDom.getBoundingClientRect();
                 this._showTalentTooltip(params.data.id, rect.left + params.event.offsetX, rect.top + params.event.offsetY);
             }
@@ -284,11 +284,12 @@ class Game {
         const availableSet = new Set(availableTalents.map(t => t.id));
         const branchColor = AITalentTree.branches[branch].color;
 
+        const stageNames = ['初始突变', '基础强化', '进阶演化', '终极形态'];
         const stageColors = [
-            this._adjustColor(branchColor, -30),
-            this._adjustColor(branchColor, -10),
-            this._adjustColor(branchColor, 15),
-            this._adjustColor(branchColor, 35),
+            this._adjustColor(branchColor, -25),
+            this._adjustColor(branchColor, -8),
+            this._adjustColor(branchColor, 12),
+            this._adjustColor(branchColor, 30),
         ];
 
         const nodesByStage = {};
@@ -303,37 +304,69 @@ class Game {
             nodesByStage[s].sort((a, b) => a.id.localeCompare(b.id));
         }
 
+        const sidePad = 60;
+        const topPad = 50;
+        const bottomPad = 50;
+        const stageHeaderH = 28;
+        const stageGap = 20;
+        const nodeAreaH = (viewH - topPad - bottomPad - 3 * stageGap - 4 * stageHeaderH) / 4;
+        const logicWidth = viewW - sidePad * 2;
+        const logicHeight = viewH;
+
         const positions = {};
-        const nodeGap = 110;
-        const leftPad = 80;
-        const rightPad = 80;
-        const topPad = 70;
-        const bottomPad = 70;
-        const rowSpacing = 150;
-        const logicWidth = leftPad + (maxCount - 1) * nodeGap + rightPad;
-        const logicHeight = topPad + 3 * rowSpacing + bottomPad;
+        const stageY = [];
 
         for (let s = 0; s < 4; s++) {
+            const stageTop = topPad + s * (stageHeaderH + nodeAreaH + stageGap);
+            const y = stageTop + stageHeaderH + nodeAreaH / 2;
+            stageY.push(y);
+
             const stageNodes = nodesByStage[s];
             const count = stageNodes.length;
-            const y = topPad + s * rowSpacing;
-
             if (count === 0) continue;
 
-            const totalNodesW = (count - 1) * nodeGap;
-            const startX = leftPad + (logicWidth - leftPad - rightPad - totalNodesW) / 2;
+            const totalW = (count - 1) * (logicWidth / maxCount);
+            const startX = sidePad + (logicWidth - totalW) / 2;
+            const stepX = count > 1 ? totalW / (count - 1) : 0;
+
             for (let i = 0; i < count; i++) {
-                const x = startX + i * nodeGap;
+                const x = startX + i * stepX;
                 positions[stageNodes[i].id] = { x, y };
             }
         }
 
-        const scaleX = viewW / logicWidth;
-        const scaleY = viewH / logicHeight;
-        const initZoom = Math.min(scaleX, scaleY) * 0.92;
-        const initCenter = [logicWidth / 2, logicHeight / 2];
+        const initZoom = 1;
+        const initCenter = [viewW / 2, viewH / 2];
 
         const data = [];
+        for (let s = 0; s < 4; s++) {
+            const stageTop = topPad + s * (stageHeaderH + nodeAreaH + stageGap);
+            const stageBgColor = this._adjustColor(branchColor, s === 0 ? -40 : (s === 1 ? -30 : (s === 2 ? -20 : -10)));
+            data.push({
+                id: '_stage_bg_' + s,
+                name: stageNames[s],
+                x: viewW / 2,
+                y: stageTop + stageHeaderH / 2,
+                fixed: true,
+                symbol: 'rect',
+                symbolSize: [viewW - sidePad * 2 + 20, stageHeaderH],
+                itemStyle: {
+                    color: stageBgColor + '22',
+                    borderColor: stageBgColor + '66',
+                    borderWidth: 1,
+                },
+                label: {
+                    show: true,
+                    position: 'inside',
+                    fontSize: 12,
+                    fontWeight: 'bold',
+                    color: stageColors[s],
+                    fontFamily: 'monospace',
+                    letterSpacing: 2,
+                },
+            });
+        }
+
         for (const node of branchNodes) {
             const pos = positions[node.id];
             const isUnlocked = unlockedSet.has(node.id);
@@ -346,24 +379,24 @@ class Game {
                     color: stageColor,
                     borderColor: '#fff',
                     borderWidth: 2,
-                    shadowBlur: 14,
+                    shadowBlur: 12,
                     shadowColor: stageColor,
                 };
             } else if (isAvailable) {
                 itemStyle = {
-                    color: 'rgba(20, 20, 40, 0.9)',
+                    color: 'rgba(15, 15, 30, 0.95)',
                     borderColor: stageColor,
                     borderWidth: 2,
                 };
             } else {
                 itemStyle = {
-                    color: 'rgba(20, 20, 40, 0.6)',
-                    borderColor: 'rgba(100, 100, 120, 0.5)',
+                    color: 'rgba(15, 15, 30, 0.6)',
+                    borderColor: 'rgba(90, 90, 110, 0.5)',
                     borderWidth: 1.5,
                 };
             }
 
-            const labelColor = isUnlocked ? '#fff' : (isAvailable ? stageColor : 'rgba(140, 140, 160, 0.7)');
+            const labelColor = isUnlocked ? '#fff' : (isAvailable ? stageColor : 'rgba(130, 130, 150, 0.7)');
 
             data.push({
                 id: node.id,
@@ -378,7 +411,7 @@ class Game {
                     fontSize: 11,
                     color: labelColor,
                     fontWeight: isUnlocked ? 'bold' : 'normal',
-                    distance: 4,
+                    distance: 5,
                 },
             });
         }
@@ -407,10 +440,10 @@ class Game {
                     lineWidth = 2;
                 } else if (preUnlocked || nodeUnlocked) {
                     lineColor = preStageColor;
-                    lineOpacity = 0.4;
+                    lineOpacity = 0.25;
                 } else {
-                    lineColor = 'rgba(100, 100, 130, 0.5)';
-                    lineOpacity = 0.35;
+                    lineColor = 'rgba(80, 80, 110, 0.2)';
+                    lineOpacity = 0.2;
                 }
 
                 links.push({
@@ -420,28 +453,28 @@ class Game {
                         color: lineColor,
                         opacity: lineOpacity,
                         width: lineWidth,
-                        curveness: 0.15,
+                        curveness: 0.1,
                     },
                 });
             }
         }
 
         return {
+            backgroundColor: 'rgba(12, 12, 24, 0.95)',
             tooltip: { show: false },
-            animationDuration: 600,
+            animationDuration: 500,
             animationEasingUpdate: 'quinticInOut',
             series: [{
                 type: 'graph',
                 layout: 'none',
-                roam: true,
+                roam: false,
                 zoom: initZoom,
                 center: initCenter,
-                scaleLimit: { min: 1, max: 2 },
                 nodeScaleRatio: 1,
                 symbol: 'circle',
-                symbolSize: 34,
+                symbolSize: 32,
                 edgeSymbol: ['none', 'arrow'],
-                edgeSymbolSize: 7,
+                edgeSymbolSize: 6,
                 emphasis: { focus: 'adjacency', scale: 1.1 },
                 data: data,
                 links: links,
