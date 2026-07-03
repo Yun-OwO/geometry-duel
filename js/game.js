@@ -179,6 +179,7 @@ class Game {
 
     initInput() {
         this.keys = {};
+        this.mouseDown = false;
         this.touchInput = {
             moveX: 0,
             moveY: 0,
@@ -231,6 +232,44 @@ class Game {
             e.preventDefault();
             this.handleTouchEnd(e.changedTouches);
         }, { passive: false });
+
+        this.canvas.addEventListener('mousedown', (e) => {
+            this.handleMouseClick(e);
+        });
+
+        this.canvas.addEventListener('mousemove', (e) => {
+            if (this.mouseDown) {
+                this.handleMouseMove(e);
+            }
+        });
+
+        this.canvas.addEventListener('mouseup', (e) => {
+            this.mouseDown = false;
+            this.touchInput.moveX = 0;
+            this.touchInput.moveY = 0;
+            this.touchInput.zPressed = false;
+            this.touchInput.xPressed = false;
+        });
+    }
+
+    handleMouseClick(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        this.mouseDown = true;
+
+        const touches = [{ clientX: e.clientX, clientY: e.clientY, identifier: 0 }];
+        this.handleTouchStart(touches);
+    }
+
+    handleMouseMove(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const touches = [{ clientX: e.clientX, clientY: e.clientY, identifier: 0 }];
+        this.handleTouchMove(touches);
     }
 
     getButtonRadius() {
@@ -1074,7 +1113,8 @@ class Game {
     }
 
     drawScreenUI(ctx) {
-        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+            (navigator.maxTouchPoints > 0 && window.innerWidth < 800);
 
         ctx.save();
 
@@ -1082,7 +1122,7 @@ class Game {
         const h = this.screenH * this.dpr;
         const dpr = this.dpr;
 
-        if (isTouch && (this.state === GameState.PLAYING || this.state === GameState.PAUSED)) {
+        if (isMobile && (this.state === GameState.PLAYING || this.state === GameState.PAUSED)) {
             const joyCenter = this.getJoystickCenter();
             const joyR = this.getJoystickRadius() * dpr;
             const joyCX = joyCenter.x * dpr;
