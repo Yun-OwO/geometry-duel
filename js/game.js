@@ -19,6 +19,12 @@ class Game {
         this.endlessWins = 0;
         this.aiGenes = this.loadAIGenes();
 
+        // 天赋树查看器状态
+        this.talentTreeView = false; // 是否显示天赋树查看器
+        this.talentTreeScroll = 0; // 天赋树滚动偏移
+        this.talentTreeBranch = 'attack'; // 当前查看的分支
+        this.talentTreeStageFilter = -1; // -1=全部, 0-3=筛选阶段
+
         this.setupCanvas();
         this.initInput();
         this.initAudio();
@@ -30,38 +36,57 @@ class Game {
     }
 
     loadAIGenes() {
+        const CURRENT_GENE_VERSION = 3;
         try {
             const saved = localStorage.getItem('geometryDuelAIGenes');
             if (saved) {
                 const data = JSON.parse(saved);
-                if (data.geneVersion !== AIMutationConfig.geneVersion) {
-                    return {
-                        genes: { ...AIGeneDefaults },
-                        generation: 0,
-                        wins: 0,
-                        lastMutations: [],
-                        geneVersion: AIMutationConfig.geneVersion,
-                    };
+                // 版本不匹配则重置
+                if (!data.geneVersion || data.geneVersion !== CURRENT_GENE_VERSION) {
+                    return this._createDefaultGenes();
                 }
+                // 兼容旧格式：如果缺少天赋树字段则初始化
+                if (!Array.isArray(data.unlockedTalents)) {
+                    data.unlockedTalents = [];
+                }
+                // 恢复 genes 字段，确保完整性
                 const genes = { ...AIGeneDefaults };
                 for (const key in AIGeneDefaults) {
                     genes[key] = data.genes && data.genes[key] !== undefined ? data.genes[key] : AIGeneDefaults[key];
                 }
+                // 根据 wins 和 AITalentTree.stages 计算 maxUnlockedStage
+                const wins = data.wins || 0;
+                let maxUnlockedStage = 0;
+                for (let s = 3; s >= 0; s--) {
+                    if (wins >= AITalentTree.stages[s].unlockWins) {
+                        maxUnlockedStage = s;
+                        break;
+                    }
+                }
                 return {
                     genes: genes,
                     generation: data.generation || 0,
-                    wins: data.wins || 0,
+                    wins: wins,
                     lastMutations: data.lastMutations || [],
-                    geneVersion: AIMutationConfig.geneVersion,
+                    unlockedTalents: data.unlockedTalents,
+                    maxUnlockedStage: maxUnlockedStage,
+                    geneVersion: CURRENT_GENE_VERSION,
                 };
             }
         } catch (e) {}
+        return this._createDefaultGenes();
+    }
+
+    // 创建默认的AI基因数据（天赋树格式）
+    _createDefaultGenes() {
         return {
             genes: { ...AIGeneDefaults },
             generation: 0,
             wins: 0,
             lastMutations: [],
-            geneVersion: AIMutationConfig.geneVersion,
+            unlockedTalents: [],
+            maxUnlockedStage: 0,
+            geneVersion: 3,
         };
     }
 
@@ -91,59 +116,53 @@ class Game {
     }
 
     evolveAI() {
-        const oldGenes = { ...this.aiGenes.genes };
-        const newGenes = { ...oldGenes };
-        const mutations = [];
+        // 天赋树进化：随机解锁一个新的天赋节点
+        const wins = this.aiGenes.wins + 1;
 
-        const valueGenes = Object.keys(AIGeneRanges);
-        const typeGenes = Object.keys(AIAlleles);
-
-        const mutationCount = AIMutationConfig.minMutations +
-            Math.floor(Math.random() * (AIMutationConfig.maxMutations - AIMutationConfig.minMutations + 1));
-
-        const allGenes = [...valueGenes, ...typeGenes];
-        const shuffled = allGenes.sort(() => Math.random() - 0.5);
-        const selectedGenes = shuffled.slice(0, mutationCount);
-
-        for (const gene of selectedGenes) {
-            if (AIGeneRanges[gene]) {
-                const result = this.mutateValueGene(oldGenes[gene], AIGeneRanges[gene]);
-                newGenes[gene] = result.value;
-                mutations.push({
-                    gene: gene,
-                    oldValue: oldGenes[gene],
-                    newValue: result.value,
-                    type: 'value',
-                    beneficial: result.beneficial,
-                });
-            } else if (AIAlleles[gene]) {
-                const result = this.mutateTypeGene(oldGenes[gene], gene);
-                newGenes[gene] = result.value;
-                mutations.push({
-                    gene: gene,
-                    oldValue: oldGenes[gene],
-                    newValue: result.value,
-                    type: 'allele',
-                    beneficial: result.beneficial,
-                });
+        // 根据 wins 计算 maxStage
+        let maxStage = 0;
+        for (let s = 3; s >= 0; s--) {
+            if (wins >= AITalentTree.stages[s].unlockWins) {
+                maxStage = s;
+                break;
             }
         }
 
-        this.aiGenes.genes = newGenes;
+        const unlockedSet = new Set(this.aiGenes.unlockedTalents);
+        const available = getAvailableTalents(unlockedSet, maxStage);
+
+        let lastMutations = [];
+        if (available.length > 0) {
+            // 从可解锁的节点中随机选一个
+            const chosen = available[Math.floor(Math.random() * available.length)];
+            // 加入已解锁数组
+            this.aiGenes.unlockedTalents.push(chosen.id);
+            // 更新 lastMutations
+            lastMutations = [{
+                gene: chosen.id,
+                type: 'talent',
+                beneficial: true,
+                newValue: chosen.name,
+            }];
+            // 如果天赋效果是 stat 类型，也更新 genes 中对应的值
+            if (chosen.effect && chosen.effect.type === 'stat' && chosen.effect.key && chosen.effect.value !== undefined) {
+                this.aiGenes.genes[chosen.effect.key] = chosen.effect.value;
+            }
+            // 如果天赋效果是 style 类型，也更新 genes 中对应的值
+            if (chosen.effect && chosen.effect.type === 'style' && chosen.effect.key && chosen.effect.value !== undefined) {
+                this.aiGenes.genes[chosen.effect.key] = chosen.effect.value;
+            }
+        }
+
         this.aiGenes.generation++;
-        this.aiGenes.wins++;
-        this.aiGenes.lastMutations = mutations;
+        this.aiGenes.wins = wins;
+        this.aiGenes.maxUnlockedStage = maxStage;
+        this.aiGenes.lastMutations = lastMutations;
         this.saveAIGenes();
     }
 
     resetAIGenes() {
-        this.aiGenes = {
-            genes: { ...AIGeneDefaults },
-            generation: 0,
-            wins: 0,
-            lastMutations: [],
-            geneVersion: AIMutationConfig.geneVersion,
-        };
+        this.aiGenes = this._createDefaultGenes();
         this.saveAIGenes();
     }
 
@@ -343,19 +362,47 @@ class Game {
             const y = t.clientY;
             const id = t.identifier;
 
+            // 天赋树查看器触摸事件
+            if (this.talentTreeView) {
+                this._lastTouchY = y;
+                this._handleTalentTreeTouch(x, y);
+                continue;
+            }
+
             if (this.state === GameState.GAME_OVER) {
                 const minDim = Math.min(this.screenW, this.screenH);
                 const btnW = minDim * 0.5;
                 const btnH = minDim * 0.09;
-                const hasMutations = this.endlessMode && this.winnerId === 0 &&
-                    this.aiGenes.lastMutations && this.aiGenes.lastMutations.length > 0;
-                const extraContent = this.endlessMode ? (hasMutations ? minDim * 0.22 : minDim * 0.12) : 0;
+                const extraContent = this.endlessMode ? minDim * 0.18 : 0;
                 const btnY = this.screenH / 2 + (this.endlessMode ? minDim * 0.08 : minDim * 0.05) + extraContent / 2;
+                // 检测"继续"按钮
                 if (x >= this.screenW / 2 - btnW / 2 && x <= this.screenW / 2 + btnW / 2 &&
                     y >= btnY - btnH / 2 && y <= btnY + btnH / 2) {
                     this.startGame();
                     this.playSound('lCharge');
                     this.vibrate(20);
+                    continue;
+                }
+                // 检测"查看天赋谱"按钮（无尽模式）
+                if (this.endlessMode) {
+                    const talentBtnW = minDim * 0.4;
+                    const talentBtnH = minDim * 0.065;
+                    // 天赋按钮位置（需与绘制位置匹配）
+                    const titleSize = minDim * 0.09;
+                    const infoY = this.screenH / 2 - minDim * 0.06 - extraContent / 2 + titleSize * 0.7;
+                    const scoreY = infoY + minDim * 0.045;
+                    const talentProgressY = scoreY + minDim * 0.04;
+                    const progressBarY = talentProgressY + minDim * 0.02;
+                    const progressBarH = minDim * 0.015;
+                    const talentBtnY = progressBarY + progressBarH + minDim * 0.025;
+                    if (x >= this.screenW / 2 - talentBtnW / 2 && x <= this.screenW / 2 + talentBtnW / 2 &&
+                        y >= talentBtnY - talentBtnH / 2 && y <= talentBtnY + talentBtnH / 2) {
+                        this.talentTreeView = true;
+                        this.talentTreeScroll = 0;
+                        this.playSound('lCharge');
+                        this.vibrate(15);
+                        continue;
+                    }
                 }
                 continue;
             }
@@ -435,6 +482,14 @@ class Game {
             const x = t.clientX;
             const y = t.clientY;
             const id = t.identifier;
+
+            // 天赋树查看器滚动
+            if (this.talentTreeView) {
+                const dy = y - (this._lastTouchY || y);
+                this.talentTreeScroll += dy;
+                this._lastTouchY = y;
+                continue;
+            }
 
             if (id === this.touchState.joystickId) {
                 this.updateJoystick(x, y);
@@ -523,7 +578,8 @@ class Game {
 
             if (this.gameMode === 'ai' && i > 0) {
                 const genes = this.endlessMode ? this.aiGenes.genes : null;
-                this.aiControllers.push(new AIController(this, i, genes));
+                const abilities = this.endlessMode ? this.getUnlockedAbilities() : null;
+                this.aiControllers.push(new AIController(this, i, genes, abilities));
             }
         }
 
@@ -531,6 +587,19 @@ class Game {
 
         this.bullets = [];
         this.particles = [];
+    }
+
+    // 获取已解锁的天赋能力列表（effect.type === 'ability' 的节点）
+    getUnlockedAbilities() {
+        if (!this.aiGenes || !this.aiGenes.unlockedTalents) return [];
+        const abilities = [];
+        for (const id of this.aiGenes.unlockedTalents) {
+            const node = AITalentTree.nodes[id];
+            if (node && node.effect && node.effect.type === 'ability') {
+                abilities.push({ id, ...node.effect });
+            }
+        }
+        return abilities;
     }
 
     resetPlayerPositions() {
@@ -597,13 +666,7 @@ class Game {
         this.demoMode = false;
 
         if (!this.endlessMode || this.endlessRound === 0) {
-            this.aiGenes = {
-                genes: { ...AIGeneDefaults },
-                generation: 0,
-                wins: 0,
-                lastMutations: [],
-                geneVersion: AIMutationConfig.geneVersion,
-            };
+            this.aiGenes = this._createDefaultGenes();
             this.saveAIGenes();
         }
 
@@ -732,6 +795,16 @@ class Game {
     }
 
     update(dt) {
+        // 天赋树查看器模式下不更新游戏逻辑
+        if (this.talentTreeView) {
+            // 允许键盘操作天赋树
+            if (this.keys['Escape']) {
+                this.talentTreeView = false;
+                this.keys['Escape'] = false;
+            }
+            return;
+        }
+
         if (this.deathAnimationPending) {
             this.deathAnimationTime += dt;
             for (const p of this.players) {
@@ -1077,6 +1150,12 @@ class Game {
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, w, h);
 
+        // 天赋树查看器模式下直接绘制天赋树
+        if (this.talentTreeView) {
+            this.drawTalentTree();
+            return;
+        }
+
         ctx.save();
 
         const scale = this.screenW / this.viewW * this.dpr;
@@ -1101,6 +1180,296 @@ class Game {
         ctx.restore();
 
         this.drawScreenUI(ctx);
+    }
+
+    // 天赋树查看器触摸事件处理
+    _handleTalentTreeTouch(x, y) {
+        const w = this.screenW;
+        const h = this.screenH;
+        const minDim = Math.min(w, h);
+        const dpr = this.dpr;
+
+        // 底部返回按钮
+        const backBtnW = minDim * 0.35;
+        const backBtnH = minDim * 0.08;
+        const backBtnY = h - minDim * 0.12;
+        if (x >= w / 2 - backBtnW / 2 && x <= w / 2 + backBtnW / 2 &&
+            y >= backBtnY - backBtnH / 2 && y <= backBtnY + backBtnH / 2) {
+            this.talentTreeView = false;
+            this.playSound('lCharge');
+            this.vibrate(15);
+            return;
+        }
+
+        // 分支标签按钮（5个分支）
+        const branchKeys = Object.keys(AITalentTree.branches);
+        const branchBtnW = minDim * 0.15;
+        const branchBtnH = minDim * 0.055;
+        const branchBtnY = minDim * 0.15;
+        const totalBranchW = branchKeys.length * branchBtnW + (branchKeys.length - 1) * minDim * 0.015;
+        const branchStartX = w / 2 - totalBranchW / 2;
+        for (let i = 0; i < branchKeys.length; i++) {
+            const bx = branchStartX + i * (branchBtnW + minDim * 0.015);
+            if (x >= bx && x <= bx + branchBtnW &&
+                y >= branchBtnY && y <= branchBtnY + branchBtnH) {
+                this.talentTreeBranch = branchKeys[i];
+                this.talentTreeScroll = 0;
+                this.vibrate(8);
+                return;
+            }
+        }
+
+        // 阶段筛选按钮（4个阶段 + 1个全部）
+        const stageBtnW = minDim * 0.12;
+        const stageBtnH = minDim * 0.045;
+        const stageBtnY = branchBtnY + branchBtnH + minDim * 0.015;
+        const stageKeys = [-1, 0, 1, 2, 3];
+        const stageLabels = ['全部', 'S0', 'S1', 'S2', 'S3'];
+        const totalStageW = stageKeys.length * stageBtnW + (stageKeys.length - 1) * minDim * 0.01;
+        const stageStartX = w / 2 - totalStageW / 2;
+        for (let i = 0; i < stageKeys.length; i++) {
+            const sx = stageStartX + i * (stageBtnW + minDim * 0.01);
+            if (x >= sx && x <= sx + stageBtnW &&
+                y >= stageBtnY && y <= stageBtnY + stageBtnH) {
+                this.talentTreeStageFilter = stageKeys[i];
+                this.talentTreeScroll = 0;
+                this.vibrate(8);
+                return;
+            }
+        }
+    }
+
+    // 绘制天赋树查看器
+    drawTalentTree() {
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const dpr = this.dpr;
+        const sw = this.screenW;
+        const sh = this.screenH;
+        const minDim = Math.min(sw, sh);
+
+        // 背景
+        ctx.fillStyle = '#0d0d1a';
+        ctx.fillRect(0, 0, w, h);
+
+        // 标题
+        const stageName = AITalentTree.stages[this.aiGenes.maxUnlockedStage || 0].name;
+        const titleText = 'AI天赋谱 · ' + stageName;
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${minDim * 0.055 * dpr}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(titleText, w / 2, minDim * 0.06 * dpr);
+
+        // 分支标签按钮
+        const branchKeys = Object.keys(AITalentTree.branches);
+        const branchBtnW = minDim * 0.15;
+        const branchBtnH = minDim * 0.055;
+        const branchBtnY = minDim * 0.15;
+        const branchSpacing = minDim * 0.015;
+        const totalBranchW = branchKeys.length * branchBtnW + (branchKeys.length - 1) * branchSpacing;
+        const branchStartX = sw / 2 - totalBranchW / 2;
+        for (let i = 0; i < branchKeys.length; i++) {
+            const key = branchKeys[i];
+            const branch = AITalentTree.branches[key];
+            const bx = (branchStartX + i * (branchBtnW + branchSpacing)) * dpr;
+            const by = branchBtnY * dpr;
+            const bw = branchBtnW * dpr;
+            const bh = branchBtnH * dpr;
+            const isActive = this.talentTreeBranch === key;
+
+            // 按钮背景
+            ctx.globalAlpha = isActive ? 0.6 : 0.15;
+            ctx.fillStyle = branch.color;
+            ctx.fillRect(bx, by, bw, bh);
+            // 边框
+            if (isActive) {
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = branch.color;
+                ctx.lineWidth = 2 * dpr;
+                ctx.strokeRect(bx, by, bw, bh);
+            }
+            // 文字
+            ctx.globalAlpha = isActive ? 1 : 0.6;
+            ctx.fillStyle = '#fff';
+            ctx.font = `${bh * 0.4}px monospace`;
+            ctx.fillText(branch.name, bx + bw / 2, by + bh / 2);
+        }
+
+        // 阶段筛选按钮
+        const stageBtnW = minDim * 0.12;
+        const stageBtnH = minDim * 0.045;
+        const stageBtnY = branchBtnY + branchBtnH + minDim * 0.015;
+        const stageKeys = [-1, 0, 1, 2, 3];
+        const stageLabels = ['全部', 'S0', 'S1', 'S2', 'S3'];
+        const stageSpacing = minDim * 0.01;
+        const totalStageW = stageKeys.length * stageBtnW + (stageKeys.length - 1) * stageSpacing;
+        const stageStartX = sw / 2 - totalStageW / 2;
+        for (let i = 0; i < stageKeys.length; i++) {
+            const sx = (stageStartX + i * (stageBtnW + stageSpacing)) * dpr;
+            const sy = stageBtnY * dpr;
+            const sbw = stageBtnW * dpr;
+            const sbh = stageBtnH * dpr;
+            const isStageActive = this.talentTreeStageFilter === stageKeys[i];
+
+            ctx.globalAlpha = isStageActive ? 0.5 : 0.1;
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(sx, sy, sbw, sbh);
+            if (isStageActive) {
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5 * dpr;
+                ctx.strokeRect(sx, sy, sbw, sbh);
+            }
+            ctx.globalAlpha = isStageActive ? 1 : 0.5;
+            ctx.fillStyle = '#fff';
+            ctx.font = `${sbh * 0.4}px monospace`;
+            ctx.fillText(stageLabels[i], sx + sbw / 2, sy + sbh / 2);
+        }
+
+        // 获取当前分支和筛选的节点
+        const branchNodes = getTalentNodesByBranch(this.talentTreeBranch);
+        const displayNodes = this.talentTreeStageFilter >= 0
+            ? branchNodes.filter(n => n.stage === this.talentTreeStageFilter)
+            : branchNodes;
+        // 按阶段排序
+        displayNodes.sort((a, b) => a.stage - b.stage || a.name.localeCompare(b.name));
+
+        // 计算滚动边界
+        const listTop = (stageBtnY + stageBtnH + minDim * 0.02) * dpr;
+        const listBottom = (sh - minDim * 0.18) * dpr;
+        const nodeCardH = minDim * 0.095 * dpr;
+        const nodeCardSpacing = minDim * 0.01 * dpr;
+        const contentHeight = displayNodes.length * (nodeCardH + nodeCardSpacing);
+        const maxScroll = Math.min(0, -(contentHeight - (listBottom - listTop)));
+        if (this.talentTreeScroll > 0) this.talentTreeScroll = 0;
+        if (this.talentTreeScroll < maxScroll) this.talentTreeScroll = maxScroll;
+
+        const unlockedSet = new Set(this.aiGenes.unlockedTalents || []);
+        const availableSet = new Set();
+        if (this.aiGenes.maxUnlockedStage !== undefined) {
+            const availableTalents = getAvailableTalents(unlockedSet, this.aiGenes.maxUnlockedStage);
+            for (const at of availableTalents) availableSet.add(at.id);
+        }
+
+        // 节点列表区域
+        const nodeCardW = (sw - minDim * 0.08) * dpr;
+        const nodeCardX = (sw / 2 - (sw - minDim * 0.08) / 2) * dpr;
+        const branchColor = AITalentTree.branches[this.talentTreeBranch].color;
+
+        // 绘制节点
+        for (let i = 0; i < displayNodes.length; i++) {
+            const node = displayNodes[i];
+            let cardY = listTop + i * (nodeCardH + nodeCardSpacing) + this.talentTreeScroll * dpr;
+            // 跳过不可见的节点
+            if (cardY + nodeCardH < listTop || cardY > listBottom) continue;
+
+            const isUnlocked = unlockedSet.has(node.id);
+            const isAvailable = availableSet.has(node.id);
+
+            // 卡片背景
+            ctx.globalAlpha = 1;
+            if (isUnlocked) {
+                // 已解锁：亮色背景
+                ctx.fillStyle = branchColor + '30';
+                ctx.fillRect(nodeCardX, cardY, nodeCardW, nodeCardH);
+                ctx.strokeStyle = branchColor;
+                ctx.lineWidth = 2 * dpr;
+                ctx.strokeRect(nodeCardX, cardY, nodeCardW, nodeCardH);
+                // 左侧标记条
+                ctx.fillStyle = branchColor;
+                ctx.fillRect(nodeCardX, cardY, 4 * dpr, nodeCardH);
+            } else if (isAvailable) {
+                // 可解锁：黄色边框
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(nodeCardX, cardY, nodeCardW, nodeCardH);
+                ctx.strokeStyle = '#ffcc00';
+                ctx.lineWidth = 1.5 * dpr;
+                ctx.strokeRect(nodeCardX, cardY, nodeCardW, nodeCardH);
+                ctx.fillStyle = '#ffcc00';
+                ctx.fillRect(nodeCardX, cardY, 4 * dpr, nodeCardH);
+            } else {
+                // 锁定：灰色
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(nodeCardX, cardY, nodeCardW, nodeCardH);
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1 * dpr;
+                ctx.strokeRect(nodeCardX, cardY, nodeCardW, nodeCardH);
+                ctx.fillStyle = '#333';
+                ctx.fillRect(nodeCardX, cardY, 4 * dpr, nodeCardH);
+            }
+
+            // 节点名称
+            ctx.globalAlpha = isUnlocked ? 1 : (isAvailable ? 0.85 : 0.35);
+            ctx.fillStyle = isUnlocked ? branchColor : (isAvailable ? '#ffcc00' : '#666');
+            ctx.font = `bold ${nodeCardH * 0.28}px monospace`;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText(node.name, nodeCardX + 12 * dpr, cardY + nodeCardH * 0.12);
+
+            // 阶段标签
+            ctx.globalAlpha = isUnlocked ? 0.7 : 0.3;
+            ctx.fillStyle = '#888';
+            ctx.font = `${nodeCardH * 0.2}px monospace`;
+            ctx.fillText(`阶段${node.stage}`, nodeCardX + 12 * dpr, cardY + nodeCardH * 0.48);
+
+            // 描述
+            ctx.globalAlpha = isUnlocked ? 0.8 : (isAvailable ? 0.6 : 0.25);
+            ctx.fillStyle = isUnlocked ? '#ccc' : (isAvailable ? '#aaa' : '#555');
+            ctx.font = `${nodeCardH * 0.2}px monospace`;
+            const maxDescW = nodeCardW - 24 * dpr;
+            let desc = node.desc;
+            if (ctx.measureText(desc).width > maxDescW) {
+                while (ctx.measureText(desc + '...').width > maxDescW && desc.length > 0) {
+                    desc = desc.slice(0, -1);
+                }
+                desc += '...';
+            }
+            ctx.fillText(desc, nodeCardX + 12 * dpr, cardY + nodeCardH * 0.68);
+
+            // 状态标记
+            if (isUnlocked) {
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = branchColor;
+                ctx.font = `bold ${nodeCardH * 0.22}px monospace`;
+                ctx.textAlign = 'right';
+                ctx.fillText('已解锁', nodeCardX + nodeCardW - 12 * dpr, cardY + nodeCardH * 0.18);
+            } else if (isAvailable) {
+                ctx.globalAlpha = 0.8;
+                ctx.fillStyle = '#ffcc00';
+                ctx.font = `${nodeCardH * 0.2}px monospace`;
+                ctx.textAlign = 'right';
+                ctx.fillText('可解锁', nodeCardX + nodeCardW - 12 * dpr, cardY + nodeCardH * 0.18);
+            } else {
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = '#555';
+                ctx.font = `${nodeCardH * 0.2}px monospace`;
+                ctx.textAlign = 'right';
+                ctx.fillText('锁定', nodeCardX + nodeCardW - 12 * dpr, cardY + nodeCardH * 0.18);
+            }
+        }
+
+        // 底部返回按钮
+        ctx.globalAlpha = 1;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const backBtnW = minDim * 0.35;
+        const backBtnH = minDim * 0.08;
+        const backBtnY = sh - minDim * 0.12;
+        const backBtnX = sw / 2 - backBtnW / 2;
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(backBtnX * dpr, backBtnY * dpr, backBtnW * dpr, backBtnH * dpr);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5 * dpr;
+        ctx.strokeRect(backBtnX * dpr, backBtnY * dpr, backBtnW * dpr, backBtnH * dpr);
+        ctx.fillStyle = '#fff';
+        ctx.font = `${backBtnH * 0.4 * dpr}px monospace`;
+        ctx.fillText('返回', sw / 2 * dpr, backBtnY * dpr + backBtnH * dpr / 2);
+
+        ctx.globalAlpha = 1;
     }
 
     drawBackground() {
@@ -1310,9 +1679,7 @@ class Game {
                     const titleYOffset = this.endlessMode ? (1 - easeText) * minDim * 0.06 : (1 - easeText) * minDim * 0.1;
                     const btnYOffset = (1 - easeText) * minDim * 0.06;
                     const titleScale = 0.7 + easeText * 0.3;
-                    const hasMutations = this.endlessMode && this.winnerId === 0 &&
-                        this.aiGenes.lastMutations && this.aiGenes.lastMutations.length > 0;
-                    const extraContent = this.endlessMode ? (hasMutations ? minDim * 0.22 : minDim * 0.12) : 0;
+                    const extraContent = this.endlessMode ? minDim * 0.18 : 0;
                     const titleY = h / 2 - (this.endlessMode ? minDim * 0.06 : minDim * 0.08) - extraContent / 2 + titleYOffset;
                     const btnY = h / 2 + (this.endlessMode ? minDim * 0.08 : minDim * 0.05) + extraContent / 2 + btnYOffset;
 
@@ -1337,6 +1704,7 @@ class Game {
                         const infoY = titleY + titleSize * 0.7;
                         ctx.fillText(`回合 ${this.endlessRound} · 胜利 ${this.endlessWins}`, w / 2, infoY);
 
+                        // AI能力评分（基于已解锁天赋数量和阶段）
                         const genes = this.aiGenes.genes;
                         const avgScore = (genes.level + genes.aimAccuracy + genes.reactionSpeed + genes.ultimateAggressiveness + genes.evasionAbility) / 5;
                         const scoreText = `AI能力评分: ${(avgScore * 100).toFixed(0)}%`;
@@ -1344,45 +1712,45 @@ class Game {
                         ctx.font = `${minDim * 0.035}px monospace`;
                         ctx.fillText(scoreText, w / 2, scoreY);
 
-                        const traitY = scoreY + minDim * 0.04;
-                        const attackName = AIAlleleNames.attackStyle[genes.attackStyle] || genes.attackStyle;
-                        const moveName = AIAlleleNames.movementStyle[genes.movementStyle] || genes.movementStyle;
-                        const ultName = AIAlleleNames.ultimateStyle[genes.ultimateStyle] || genes.ultimateStyle;
-                        const traitName = AIAlleleNames.specialTrait[genes.specialTrait] || genes.specialTrait;
-                        const strategyName = AIAlleleNames.strategyMutation[genes.strategyMutation] || genes.strategyMutation;
-                        let traitText = `攻击${attackName} · 移动${moveName} · 大招${ultName}`;
-                        if (genes.specialTrait !== 'none') traitText += ` · ${traitName}`;
-                        if (genes.strategyMutation !== 'none') traitText += ` · ${strategyName}`;
-                        ctx.font = `${minDim * 0.025}px monospace`;
-                        ctx.globalAlpha = easeText * 0.7;
-                        ctx.fillText(traitText, w / 2, traitY);
+                        // 天赋解锁进度
+                        const totalNodes = Object.keys(AITalentTree.nodes).length;
+                        const unlockedCount = this.aiGenes.unlockedTalents ? this.aiGenes.unlockedTalents.length : 0;
+                        const talentLevelText = `天赋 Lv.${this.aiGenes.maxUnlockedStage + 1} · 已解锁 ${unlockedCount}/${totalNodes}`;
+                        const talentProgressY = scoreY + minDim * 0.04;
+                        ctx.font = `${minDim * 0.028}px monospace`;
+                        ctx.globalAlpha = easeText * 0.8;
+                        ctx.fillStyle = '#444';
+                        ctx.fillText(talentLevelText, w / 2, talentProgressY);
 
-                        if (this.winnerId === 0 && this.aiGenes.lastMutations && this.aiGenes.lastMutations.length > 0) {
-                            ctx.globalAlpha = easeText;
-                            ctx.font = `bold ${minDim * 0.03}px monospace`;
-                            ctx.fillStyle = '#1a6b1a';
-                            const mutTitleY = traitY + minDim * 0.045;
-                            ctx.fillText('AI 发生突变!', w / 2, mutTitleY);
+                        // 天赋进度条
+                        const progressBarW = minDim * 0.5;
+                        const progressBarH = minDim * 0.015;
+                        const progressBarX = w / 2 - progressBarW / 2;
+                        const progressBarY = talentProgressY + minDim * 0.02;
+                        // 背景
+                        ctx.globalAlpha = easeText * 0.2;
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(progressBarX, progressBarY, progressBarW, progressBarH);
+                        // 进度
+                        const progress = totalNodes > 0 ? unlockedCount / totalNodes : 0;
+                        ctx.globalAlpha = easeText * 0.6;
+                        ctx.fillStyle = '#6b3fa0';
+                        ctx.fillRect(progressBarX, progressBarY, progressBarW * progress, progressBarH);
 
-                            ctx.font = `${minDim * 0.025}px monospace`;
-                            for (let i = 0; i < this.aiGenes.lastMutations.length; i++) {
-                                const m = this.aiGenes.lastMutations[i];
-                                const geneName = AIGeneNames[m.gene] || m.gene;
-                                let mutText = '';
-                                if (m.type === 'allele') {
-                                    const oldName = AIAlleleNames[m.gene] ? (AIAlleleNames[m.gene][m.oldValue] || m.oldValue) : m.oldValue;
-                                    const newName = AIAlleleNames[m.gene] ? (AIAlleleNames[m.gene][m.newValue] || m.newValue) : m.newValue;
-                                    mutText = `${geneName}: ${oldName} → ${newName}`;
-                                } else {
-                                    const diff = m.newValue - m.oldValue;
-                                    const sign = diff > 0 ? '+' : '';
-                                    mutText = `${geneName}: ${sign}${(diff * 100).toFixed(1)}%`;
-                                }
-                                ctx.fillStyle = m.beneficial ? '#1a6b1a' : '#8b1a1a';
-                                const mutY = mutTitleY + minDim * 0.035 * (i + 1);
-                                ctx.fillText(mutText, w / 2, mutY);
-                            }
-                        }
+                        // 查看天赋谱按钮
+                        const talentBtnW = minDim * 0.4;
+                        const talentBtnH = minDim * 0.065;
+                        const talentBtnY = progressBarY + progressBarH + minDim * 0.025;
+                        ctx.globalAlpha = easeText * 0.15;
+                        ctx.fillStyle = '#6b3fa0';
+                        ctx.fillRect(w / 2 - talentBtnW / 2, talentBtnY - talentBtnH / 2, talentBtnW, talentBtnH);
+                        ctx.globalAlpha = easeText;
+                        ctx.strokeStyle = '#6b3fa0';
+                        ctx.lineWidth = 2 * dpr;
+                        ctx.strokeRect(w / 2 - talentBtnW / 2, talentBtnY - talentBtnH / 2, talentBtnW, talentBtnH);
+                        ctx.font = `${talentBtnH * 0.38}px monospace`;
+                        ctx.fillStyle = '#6b3fa0';
+                        ctx.fillText('查看天赋谱', w / 2, talentBtnY);
                     }
 
                     ctx.globalAlpha = easeText * 0.15;
@@ -2215,7 +2583,7 @@ class Particle {
 }
 
 class AIController {
-    constructor(game, aiId, genes = null) {
+    constructor(game, aiId, genes = null, abilities = null) {
         this.game = game;
         this.aiId = aiId;
         this.currentPlan = 'move';
@@ -2228,6 +2596,7 @@ class AIController {
         this.shieldActive = 0;
         this.weavePhase = 0;
         this.genes = genes || { ...AIGeneDefaults };
+        this.abilities = abilities || []; // 天赋解锁的特殊能力
         this.trackTimer = 0;
         this.lastTrackedEnemy = null;
     }
@@ -2270,6 +2639,14 @@ class AIController {
 
     getStrategyMutation() {
         return this.genes.strategyMutation;
+    }
+
+    // 获取已解锁的天赋能力（按 key 查找）
+    getAbility(key) {
+        for (let i = 0; i < this.abilities.length; i++) {
+            if (this.abilities[i].key === key) return this.abilities[i];
+        }
+        return null;
     }
 
     getThreatInfo(ai) {
@@ -2387,6 +2764,9 @@ class AIController {
             moveY: this.verticalMove,
             zPressed: this.currentPlan === 'jab',
             xPressed: xPressed,
+            // 天赋增强标记
+            fireRateBoost: this.getAbility('fireRateBoost'),
+            powerShot: this.getAbility('powerShot'),
         };
     }
 
@@ -2721,6 +3101,14 @@ class AIController {
         if (ty > ai.y + allowance) this.verticalMove = 1;
         else if (ty < ai.y - allowance) this.verticalMove = -1;
         else this.verticalMove = 0;
+
+        // 天赋增强：移动速度加成
+        const moveBoost = this.getAbility('moveSpeedBoost');
+        if (moveBoost) {
+            const multiplier = moveBoost.params && moveBoost.params.multiplier || 1.5;
+            this.horizontalMove *= multiplier;
+            this.verticalMove *= multiplier;
+        }
     }
 
     setMoveDirectionToPoint(ai, tx, ty, allowance) {
