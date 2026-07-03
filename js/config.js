@@ -1,9 +1,9 @@
 const PLAYER_COLORS = [
-    { body: '#ffffff', stroke: '#000000', orbit: 'rgba(45, 65, 140, ', glow: 'rgba(90, 140, 255, ', laserCore: '#101030', laserOuter: 'rgba(60, 100, 255, 0.25)', laserMid: 'rgba(100, 150, 255, 0.5)', laserInner: 'rgba(180, 200, 255, 0.8)', deathShard: '#303060', deathGlow: 'rgba(100, 120, 255, 0.6)', bullet: '#808080' },
-    { body: '#000000', stroke: '#ffffff', orbit: 'rgba(155, 115, 30, ', glow: 'rgba(255, 200, 80, ', laserCore: '#fff8e0', laserOuter: 'rgba(255, 200, 60, 0.25)', laserMid: 'rgba(255, 220, 100, 0.5)', laserInner: 'rgba(255, 240, 180, 0.8)', deathShard: '#606080', deathGlow: 'rgba(255, 200, 100, 0.6)', bullet: '#a0a0a0' },
-    { body: '#8b0000', stroke: '#ff6b6b', orbit: 'rgba(120, 30, 30, ', glow: 'rgba(255, 100, 100, ', laserCore: '#300000', laserOuter: 'rgba(255, 60, 60, 0.25)', laserMid: 'rgba(255, 100, 100, 0.5)', laserInner: 'rgba(255, 150, 150, 0.8)', deathShard: '#603030', deathGlow: 'rgba(255, 100, 100, 0.6)', bullet: '#c06060' },
-    { body: '#006400', stroke: '#90ee90', orbit: 'rgba(30, 100, 30, ', glow: 'rgba(100, 255, 100, ', laserCore: '#003000', laserOuter: 'rgba(60, 255, 60, 0.25)', laserMid: 'rgba(100, 255, 100, 0.5)', laserInner: 'rgba(150, 255, 150, 0.8)', deathShard: '#306030', deathGlow: 'rgba(100, 255, 100, 0.6)', bullet: '#60c060' },
-    { body: '#4b0082', stroke: '#dda0dd', orbit: 'rgba(80, 30, 130, ', glow: 'rgba(200, 100, 255, ', laserCore: '#200040', laserOuter: 'rgba(150, 60, 255, 0.25)', laserMid: 'rgba(200, 100, 255, 0.5)', laserInner: 'rgba(220, 150, 255, 0.8)', deathShard: '#403060', deathGlow: 'rgba(200, 100, 255, 0.6)', bullet: '#a060c0' },
+    { body: '#ffffff', stroke: '#000000', orbit: 'rgba(45, 65, 140, ', glow: 'rgba(90, 140, 255, ', laserCore: '#101030', laserOuter: 'rgba(60, 100, 255, 0.25)', laserMid: 'rgba(100, 150, 255, 0.5)', laserInner: 'rgba(180, 200, 255, 0.8)', deathShard: '#303060', deathGlow: 'rgba(100, 120, 255, 0.6)', bullet: '#7a9fff' },
+    { body: '#000000', stroke: '#ffffff', orbit: 'rgba(155, 115, 30, ', glow: 'rgba(255, 200, 80, ', laserCore: '#fff8e0', laserOuter: 'rgba(255, 200, 60, 0.25)', laserMid: 'rgba(255, 220, 100, 0.5)', laserInner: 'rgba(255, 240, 180, 0.8)', deathShard: '#606080', deathGlow: 'rgba(255, 200, 100, 0.6)', bullet: '#ffcc55' },
+    { body: '#8b0000', stroke: '#ff6b6b', orbit: 'rgba(120, 30, 30, ', glow: 'rgba(255, 100, 100, ', laserCore: '#300000', laserOuter: 'rgba(255, 60, 60, 0.25)', laserMid: 'rgba(255, 100, 100, 0.5)', laserInner: 'rgba(255, 150, 150, 0.8)', deathShard: '#603030', deathGlow: 'rgba(255, 100, 100, 0.6)', bullet: '#ff5555' },
+    { body: '#006400', stroke: '#90ee90', orbit: 'rgba(30, 100, 30, ', glow: 'rgba(100, 255, 100, ', laserCore: '#003000', laserOuter: 'rgba(60, 255, 60, 0.25)', laserMid: 'rgba(100, 255, 100, 0.5)', laserInner: 'rgba(150, 255, 150, 0.8)', deathShard: '#306030', deathGlow: 'rgba(100, 255, 100, 0.6)', bullet: '#55ff77' },
+    { body: '#4b0082', stroke: '#dda0dd', orbit: 'rgba(80, 30, 130, ', glow: 'rgba(200, 100, 255, ', laserCore: '#200040', laserOuter: 'rgba(150, 60, 255, 0.25)', laserMid: 'rgba(200, 100, 255, 0.5)', laserInner: 'rgba(220, 150, 255, 0.8)', deathShard: '#403060', deathGlow: 'rgba(200, 100, 255, 0.6)', bullet: '#cc77ff' },
 ];
 
 const CONFIG = {
@@ -27,9 +27,9 @@ const CONFIG = {
     ORBIT_MORPH_SPEED: 0.25,
     MAX_BULLETS: 50,
     MAX_PARTICLES: 200,
-    NORMAL_BULLET_SPEED: 10,
+    NORMAL_BULLET_SPEED: 14,
     NORMAL_BULLET_INTERVAL: 0.18,
-    NORMAL_BULLET_LENGTH: 16,
+    NORMAL_BULLET_LENGTH: 20,
     ULTIMATE_BULLET_SPEED: 48,
     ULTIMATE_CHARGE_TIME: 0.25,
     ULTIMATE_LASER_LENGTH: 160,

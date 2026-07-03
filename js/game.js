@@ -2064,11 +2064,24 @@ class Bullet {
             ctx.fill();
         } else {
             const color = colors.bullet;
+            const len = CONFIG.NORMAL_BULLET_LENGTH;
+
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 8;
             ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(-CONFIG.NORMAL_BULLET_LENGTH / 2, 0);
-            ctx.lineTo(CONFIG.NORMAL_BULLET_LENGTH / 2, 0);
+            ctx.moveTo(-len / 2, 0);
+            ctx.lineTo(len / 2, 0);
+            ctx.stroke();
+
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(-len / 2 + 2, 0);
+            ctx.lineTo(len / 2 - 2, 0);
             ctx.stroke();
         }
 
@@ -2323,14 +2336,16 @@ class AIController {
         }
 
         if (strategyMutation === 'turtle') {
-            this.horizontalMove = 0;
-            this.verticalMove = 0;
-            if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.3) {
+            if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.4) {
+                this.horizontalMove = 0;
+                this.verticalMove = 0;
                 this.currentPlan = 'kill';
                 this.setKillDirection(ai, target);
                 this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_CLOSE;
             } else {
-                this.currentPlan = 'move';
+                this.horizontalMove = 0;
+                this.verticalMove = 0;
+                this.currentPlan = 'jab';
             }
             return;
         }
@@ -2348,16 +2363,17 @@ class AIController {
             const distToCorner = Math.sqrt((ai.x - this.cornerTarget.x) ** 2 + (ai.y - this.cornerTarget.y) ** 2);
             if (distToCorner > 30) {
                 this.setMoveDirectionToPoint(ai, this.cornerTarget.x, this.cornerTarget.y, 20);
+                this.currentPlan = 'move';
             } else {
                 this.horizontalMove = 0;
                 this.verticalMove = 0;
-            }
-            if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.2) {
-                this.currentPlan = 'kill';
-                this.setKillDirection(ai, target);
-                this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_CLOSE;
-            } else {
-                this.currentPlan = strategyMutation === 'no_attack' ? 'move' : (Math.random() < 0.3 ? 'move' : 'jab');
+                if (canUseUltimate && this.killCooldown <= 0 && Math.random() < 0.25) {
+                    this.currentPlan = 'kill';
+                    this.setKillDirection(ai, target);
+                    this.killCooldown = CONFIG.AI_ULTIMATE_COOLDOWN_CLOSE;
+                } else {
+                    this.currentPlan = 'jab';
+                }
             }
             return;
         }
