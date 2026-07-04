@@ -335,11 +335,13 @@ class Game {
         const screen = document.getElementById('talent-tree-screen');
         screen.classList.add('hidden');
         this._hideTalentTooltip();
+        this._hideGeneDetail();
         this.talentTreeView = false;
     }
 
     switchTalentBranch(branch) {
         this.talentTreeBranch = branch;
+        this._hideGeneDetail();
 
         const tabs = document.querySelectorAll('.talent-tab');
         tabs.forEach((tab) => {
@@ -396,12 +398,12 @@ class Game {
             const onPath = isOnCurrentPath(nodeId);
             const stageColor = stageColors[node.stage];
 
-            let symbolSize = 30;
+            let symbolSize = 34;
             let itemStyle;
             let labelStyle = {};
 
             if (isCurrentPath) {
-                symbolSize = 42;
+                symbolSize = 48;
                 itemStyle = {
                     color: {
                         type: 'radial',
@@ -427,7 +429,7 @@ class Game {
                     textBorderWidth: 2,
                 };
             } else if (isUnlocked) {
-                symbolSize = onPath ? 36 : 32;
+                symbolSize = onPath ? 40 : 36;
                 itemStyle = {
                     color: {
                         type: 'radial',
@@ -898,9 +900,27 @@ class Game {
 
             if (this.state === GameState.GAME_OVER) {
                 const minDim = Math.min(this.screenW, this.screenH);
+                const isPortrait = this.screenH > this.screenW;
                 const btnW = minDim * 0.5;
                 const btnH = minDim * 0.09;
-                const extraContent = this.endlessMode ? minDim * 0.18 : 0;
+
+                let extraContent = 0;
+                if (this.endlessMode) {
+                    const lastMutations = this.aiGenes.lastMutations || [];
+                    const maxMutations = isPortrait ? 3 : 5;
+                    const mutationCount = Math.min(lastMutations.length, maxMutations);
+                    let mutationHeight = 0;
+                    if (lastMutations.length > 0) {
+                        mutationHeight = minDim * 0.035 + mutationCount * minDim * 0.028;
+                        if (lastMutations.length > maxMutations) {
+                            mutationHeight += minDim * 0.025;
+                        }
+                        mutationHeight += minDim * 0.025;
+                    }
+                    const talentBtnHeight = minDim * 0.065 + minDim * 0.015;
+                    extraContent = minDim * 0.12 + mutationHeight + talentBtnHeight;
+                }
+
                 const btnY = this.screenH / 2 + (this.endlessMode ? minDim * 0.08 : minDim * 0.05) + extraContent / 2;
                 // 检测"继续"按钮
                 if (x >= this.screenW / 2 - btnW / 2 && x <= this.screenW / 2 + btnW / 2 &&
@@ -923,11 +943,12 @@ class Game {
                     const progressBarH = minDim * 0.015;
                     // 计算基因变化区域的高度
                     const lastMutations = this.aiGenes.lastMutations || [];
+                    const maxMutations = isPortrait ? 3 : 5;
                     let mutationHeight = 0;
                     if (lastMutations.length > 0) {
-                        const mutationCount = Math.min(lastMutations.length, 5);
+                        const mutationCount = Math.min(lastMutations.length, maxMutations);
                         mutationHeight = minDim * 0.035 + mutationCount * minDim * 0.028;
-                        if (lastMutations.length > 5) {
+                        if (lastMutations.length > maxMutations) {
                             mutationHeight += minDim * 0.025;
                         }
                         mutationHeight += minDim * 0.025;
@@ -1915,13 +1936,31 @@ class Game {
                 if (textAlpha > 0) {
                     const easeText = textAlpha * textAlpha * (3 - 2 * textAlpha);
                     const minDim = Math.min(w, h);
+                    const isPortrait = h > w;
                     const titleSize = minDim * 0.09;
                     const btnW = minDim * 0.5;
                     const btnH = minDim * 0.09;
                     const titleYOffset = this.endlessMode ? (1 - easeText) * minDim * 0.06 : (1 - easeText) * minDim * 0.1;
                     const btnYOffset = (1 - easeText) * minDim * 0.06;
                     const titleScale = 0.7 + easeText * 0.3;
-                    const extraContent = this.endlessMode ? minDim * 0.18 : 0;
+
+                    let extraContent = 0;
+                    if (this.endlessMode) {
+                        const lastMutations = this.aiGenes.lastMutations || [];
+                        const maxMutations = isPortrait ? 3 : 5;
+                        const mutationCount = Math.min(lastMutations.length, maxMutations);
+                        let mutationHeight = 0;
+                        if (lastMutations.length > 0) {
+                            mutationHeight = minDim * 0.035 + mutationCount * minDim * 0.028;
+                            if (lastMutations.length > maxMutations) {
+                                mutationHeight += minDim * 0.025;
+                            }
+                            mutationHeight += minDim * 0.025;
+                        }
+                        const talentBtnHeight = minDim * 0.065 + minDim * 0.015;
+                        extraContent = minDim * 0.12 + mutationHeight + talentBtnHeight;
+                    }
+
                     const titleY = h / 2 - (this.endlessMode ? minDim * 0.06 : minDim * 0.08) - extraContent / 2 + titleYOffset;
                     const btnY = h / 2 + (this.endlessMode ? minDim * 0.08 : minDim * 0.05) + extraContent / 2 + btnYOffset;
 
@@ -1981,6 +2020,7 @@ class Game {
 
                         // 本轮基因变化
                         const lastMutations = this.aiGenes.lastMutations || [];
+                        const maxMutations = isPortrait ? 3 : 5;
                         let mutationY = progressBarY + progressBarH + minDim * 0.025;
                         if (lastMutations.length > 0) {
                             ctx.globalAlpha = easeText;
@@ -1998,7 +2038,7 @@ class Game {
                                 special: '特殊',
                             };
 
-                            for (let i = 0; i < Math.min(lastMutations.length, 5); i++) {
+                            for (let i = 0; i < Math.min(lastMutations.length, maxMutations); i++) {
                                 const mut = lastMutations[i];
                                 const branchColor = AIGeneTree.branches[mut.branch] ? AIGeneTree.branches[mut.branch].color : '#6b3fa0';
                                 const prefix = mut.type === 'mutation' ? '✦ 突变: ' : '+ 进化: ';
@@ -2012,11 +2052,11 @@ class Game {
                                 mutationY += minDim * 0.028;
                             }
 
-                            if (lastMutations.length > 5) {
+                            if (lastMutations.length > maxMutations) {
                                 ctx.globalAlpha = easeText * 0.5;
                                 ctx.font = `${minDim * 0.022}px monospace`;
                                 ctx.fillStyle = '#666';
-                                ctx.fillText(`... 还有 ${lastMutations.length - 5} 项变化`, w / 2, mutationY);
+                                ctx.fillText(`... 还有 ${lastMutations.length - maxMutations} 项变化`, w / 2, mutationY);
                                 mutationY += minDim * 0.025;
                             }
                         }
