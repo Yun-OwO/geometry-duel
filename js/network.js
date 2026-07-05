@@ -1,13 +1,13 @@
 const NETWORK_CONFIG = {
-    SIGNALING_URL: window.location.origin,
+    SIGNALING_URL: "https://geo.rngoodday.qzz.io",
     STUN_SERVERS: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun.aliyun.com:3478' },
+        { urls: 'stun:stun.qq.com:3478' },
+        { urls: 'stun:stun.cloudflare.com:3478' },
     ],
     INPUT_BUFFER_SIZE: 3,
     FRAME_DELAY: 3,
-    POLL_INTERVAL: 100,
+    POLL_INTERVAL: 1000,
 };
 
 const NET_LOG = (...args) => console.log('%c[NET]', 'color:#0a0;font-weight:bold', ...args);
@@ -126,6 +126,7 @@ class FrameSync {
             if (this.stallCount % 60 === 1) {
                 const got = frameInputs ? frameInputs.size : 0;
                 FS_LOG(`stall frame=${targetFrame} expected=${expectedRemotes} got=${got} inputsCollected=${this.inputsCollected}`);
+                console.log(`[CANADVANCE] frame=${this.frame} inputsCollected=${this.inputsCollected} remoteFrames.has(${this.frame})=${this.remoteFrames.has(this.frame)} remoteSize=${this.remoteFrames.get(this.frame)?.size ?? 0} expectedRemotes=${this.playerCount - 1}`);
             }
             return false;
         }
@@ -318,7 +319,7 @@ class NetworkManager {
                     for (const p of this.knownPlayers) {
                         if (p.id !== this.playerId && !this.connections.has(p.id)) {
                             NET_LOG('host initiating connection to player', p.id);
-                            this.connectToPlayer(p.id).catch((e) => NET_WARN('connectToPlayer failed', p.id, e));
+                            this.connectToPlayer(p.id).catch((e) => {NET_WARN('connectToPlayer failed', p.id, e);prompt('err:', e);});
                         }
                     }
                 }
