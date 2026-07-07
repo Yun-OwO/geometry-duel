@@ -4,10 +4,104 @@ const NETWORK_CONFIG = {
         { urls: 'stun:stun.aliyun.com:3478' },
         { urls: 'stun:stun.qq.com:3478' },
         { urls: 'stun:stun.cloudflare.com:3478' },
+        { urls: 'stun:stun.healthtap.com:3478' },
+        { urls: 'stun:stun.business-isp.nl:3478' },
+        { urls: 'stun:stun.framasoft.org:3478' },
+        { urls: 'stun:stun.nextcloud.com:443' },
+        { urls: 'stun:stun.telviva.com:3478' },
+        { urls: 'stun:stun.lebendigefluesse.at:3478' },
+        { urls: 'stun:stun.siptrunk.com:3478' },
+        { urls: 'stun:stun.uabrides.com:3478' },
+        { urls: 'stun:stun.ipfire.org:3478' },
+        { urls: 'stun:stun.ru-brides.com:3478' },
+        { urls: 'stun:stun.genymotion.com:3478' },
+        { urls: 'stun:stun.files.fm:3478' },
+        { urls: 'stun:stun.pure-ip.com:3478' },
+        { urls: 'stun:stun.moonlight-stream.org:3478' },
+        { urls: 'stun:stun.hot-chilli.net:3478' },
+        { urls: 'stun:stun.romancecompass.com:3478' },
+        { urls: 'stun:stun.nextcloud.com:3478' },
+        { urls: 'stun:stun.voipia.net:3478' },
+        { urls: 'stun:stun.zentauron.de:3478' },
+        { urls: 'stun:stun.ttmath.org:3478' },
+        { urls: 'stun:stun.sipnet.com:3478' },
+        { urls: 'stun:stun.voipgate.com:3478' },
+        { urls: 'stun:stun.frozenmountain.com:3478' },
+        { urls: 'stun:stun.sonetel.net:3478' },
+        { urls: 'stun:stun.meetwife.com:3478' },
+        { urls: 'stun:stun.finsterwalder.com:3478' },
+        { urls: 'stun:stun.linuxtrent.it:3478' },
+        { urls: 'stun:stun.cope.es:3478' },
+        { urls: 'stun:stun.baltmannsweiler.de:3478' },
+        { urls: 'stun:stun.fmo.de:3478' },
+        { urls: 'stun:stun.bcs2005.net:3478' },
+        { urls: 'stun:stun.voip.blackberry.com:3478' },
+        { urls: 'stun:stun.vavadating.com:3478' },
+        { urls: 'stun:stun.tel2.co.uk:3478' },
+        { urls: 'stun:stun.diallog.com:3478' },
+        { urls: 'stun:stun.f.haeder.net:3478' },
+        { urls: 'stun:stun.vomessen.de:3478' },
+        { urls: 'stun:stun.godatenow.com:3478' },
+        { urls: 'stun:stun.lovense.com:3478' },
+        { urls: 'stun:stun.fitauto.ru:3478' },
+        { urls: 'stun:stun.poetamatusel.org:3478' },
+        { urls: 'stun:stun.bridesbay.com:3478' },
+        { urls: 'stun:stun.ringostat.com:3478' },
+        { urls: 'stun:stun.nanocosmos.de:3478' },
+        { urls: 'stun:stun.schulinformatik.at:3478' },
+        { urls: 'stun:stun.telnyx.com:3478' },
+        { urls: 'stun:stun.annatel.net:3478' },
+        { urls: 'stun:stun.ncic.com:3478' },
+        { urls: 'stun:stun.axialys.net:3478' },
+        { urls: 'stun:stun.stochastix.de:3478' },
+        { urls: 'stun:stun.skydrone.aero:3478' },
+        { urls: 'stun:stun.engineeredarts.co.uk:3478' },
+        { urls: 'stun:stun.grazertrinkwasseringefahr.at:3478' },
+        { urls: 'stun:stun.flashdance.cx:3478' },
+        { urls: 'stun:stun.graftlab.com:3478' },
+        { urls: 'stun:stun.eol.co.nz:3478' },
+        { urls: 'stun:stun.siplogin.de:3478' },
+        { urls: 'stun:stun.m-online.net:3478' },
+        { urls: 'stun:stun.yesdates.com:3478' },
+        { urls: 'stun:stun.kaseya.com:3478' },
+        { urls: 'stun:stun.romaaeterna.nl:3478' },
+        { urls: 'stun:stun.technosens.fr:3478' },
+        { urls: 'stun:stun.signalwire.com:3478' },
+        { urls: 'stun:stun.alpirsbacher.de:3478' },
+        { urls: 'stun:stun.radiojar.com:3478' },
+        { urls: 'stun:stun.geesthacht.de:3478' },
+        { urls: 'stun:stun.ukh.de:3478' },
+        { urls: 'stun:stun.dcalling.de:3478' },
+        { urls: 'stun:stun.freeswitch.org:3478' },
+        { urls: 'stun:stun.cellmail.com:3478' },
+        { urls: 'stun:stun.tula.nu:3478' },
+        { urls: 'stun:stun.sonetel.com:3478' },
+        { urls: 'stun:stun.dus.net:3478' },
+        { urls: 'stun:stun.peethultra.be:3478' },
+        { urls: 'stun:stun.sip.us:3478' },
+        { urls: 'stun:stun.thinkrosystem.com:3478' },
+        { urls: 'stun:stun.threema.ch:3478' },
+        { urls: 'stun:stun.bitburger.de:3478' },
+        { urls: 'stun:stun.bethesda.net:3478' },
+        { urls: 'stun:stun.kanojo.de:3478' },
+        { urls: 'stun:stun.galeriemagnet.at:3478' },
+        { urls: 'stun:stun.mixvoip.com:3478' },
+        { urls: 'stun:stun.acronis.com:3478' },
+        { urls: 'stun:stun.atagverwarming.nl:3478' },
+        { urls: 'stun:stun.sipthor.net:3478' },
+        { urls: 'stun:stun.verbo.be:3478' },
+        { urls: 'stun:stun.oncloud7.ch:3478' },
     ],
     INPUT_BUFFER_SIZE: 3,
     FRAME_DELAY: 3,
     POLL_INTERVAL: 1000,
+    PING_INTERVAL: 2000,
+    PING_TIMEOUT: 5000,
+    INPUT_TIMEOUT: 3000,
+    HANDSHAKE_TIMEOUT: 10000,
+    HANDSHAKE_RETRY_DELAY: 2000,
+    MAX_HANDSHAKE_RETRIES: 5,
+    STUN_BATCH_SIZE: 5,
 };
 
 const NET_LOG = (...args) => console.log('%c[NET]', 'color:#0a0;font-weight:bold', ...args);
@@ -177,11 +271,25 @@ class NetworkManager {
         this.onPlayerLeave = null;
         this.onGameStart = null;
         this.onRemoteInput = null;
+        this.onNetworkStatus = null;
+        this.onHandshakeComplete = null;
+        this.onHandshakeFailed = null;
         this.pollInterval = null;
+        this.pingInterval = null;
         this.pollSince = 0;
         this.signalQueue = [];
         this.knownPlayers = [];
         this.gameStarted = false;
+        this.handshakeStarted = false;
+        this.handshakeCompleted = false;
+        this.handshakeRetries = 0;
+        this.handshakeTimer = null;
+        this.pingTimestamps = new Map();
+        this.lastInputReceived = new Map();
+        this.connectionStatus = new Map();
+        this.iceCandidateBuffer = new Map();
+        this.currentStunStartIndex = 0;
+        this.reconnectingPlayers = new Set();
     }
 
     get signalingUrl() {
@@ -252,6 +360,7 @@ class NetworkManager {
 
     async leaveRoom() {
         this.stopPolling();
+        this.stopPing();
         if (this.signalingUrl && this.roomCode) {
             fetch(`${this.signalingUrl}/api/room/${this.roomCode}/leave`, {
                 method: 'POST',
@@ -265,6 +374,10 @@ class NetworkManager {
         this.isHost = false;
         this.knownPlayers = [];
         this.gameStarted = false;
+        this.pingTimestamps.clear();
+        this.lastInputReceived.clear();
+        this.connectionStatus.clear();
+        this.iceCandidateBuffer.clear();
     }
 
     generateRoomCode() {
@@ -287,6 +400,85 @@ class NetworkManager {
             clearInterval(this.pollInterval);
             this.pollInterval = null;
         }
+    }
+
+    startPing() {
+        this.stopPing();
+        this.pingInterval = setInterval(() => {
+            this.sendPing();
+            this.checkInputTimeout();
+        }, NETWORK_CONFIG.PING_INTERVAL);
+    }
+
+    stopPing() {
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
+        }
+    }
+
+    sendPing() {
+        if (this.dataChannels.size === 0) return;
+        const msg = JSON.stringify({ type: 'ping', timestamp: Date.now() });
+        for (const [id, dc] of this.dataChannels) {
+            if (dc.readyState === 'open') {
+                try {
+                    dc.send(msg);
+                    if (!this.pingTimestamps.has(id)) {
+                        this.pingTimestamps.set(id, Date.now());
+                    }
+                } catch (e) {
+                    NET_WARN('ping send failed to', id, e);
+                }
+            }
+        }
+    }
+
+    checkInputTimeout() {
+        const now = Date.now();
+        let statusChanged = false;
+
+        for (const player of this.knownPlayers) {
+            if (player.id === this.playerId) continue;
+
+            const lastInput = this.lastInputReceived.get(player.id) || 0;
+            const lastPing = this.pingTimestamps.get(player.id) || 0;
+            const inputDelay = now - lastInput;
+            const pingDelay = now - lastPing;
+
+            let newStatus = 'connected';
+            if (inputDelay > NETWORK_CONFIG.INPUT_TIMEOUT && this.gameStarted) {
+                newStatus = 'input_timeout';
+            } else if (pingDelay > NETWORK_CONFIG.PING_TIMEOUT) {
+                newStatus = 'ping_timeout';
+            }
+
+            const oldStatus = this.connectionStatus.get(player.id) || 'unknown';
+            if (newStatus !== oldStatus) {
+                this.connectionStatus.set(player.id, newStatus);
+                statusChanged = true;
+                NET_LOG(`Connection status changed for player ${player.id}: ${oldStatus} -> ${newStatus}`);
+            }
+        }
+
+        if (statusChanged && this.onNetworkStatus) {
+            this.onNetworkStatus(this.getConnectionStatusSummary());
+        }
+    }
+
+    getCurrentStunBatch() {
+        const all = NETWORK_CONFIG.STUN_SERVERS;
+        const start = this.currentStunStartIndex % all.length;
+        const batch = [];
+        for (let i = 0; i < NETWORK_CONFIG.STUN_BATCH_SIZE && i < all.length; i++) {
+            batch.push(all[(start + i) % all.length]);
+        }
+        return batch;
+    }
+
+    rotateStunBatch() {
+        this.currentStunStartIndex = (this.currentStunStartIndex + NETWORK_CONFIG.STUN_BATCH_SIZE) % NETWORK_CONFIG.STUN_SERVERS.length;
+        NET_LOG('Rotated STUN batch, new start index:', this.currentStunStartIndex);
     }
 
     /**
@@ -362,18 +554,18 @@ class NetworkManager {
      * 创建到 targetId 的 RTCPeerConnection。
      * 房主作为 offer 方创建 DataChannel；非房主作为 answer 方，被动接收 DataChannel。
      */
-    async connectToPlayer(playerId) {
+    async connectToPlayer(playerId, useStunBatch = false) {
         if (this.connections.has(playerId)) return this.connections.get(playerId);
 
-        NET_LOG('connectToPlayer', playerId, 'isHost=', this.isHost);
+        const stunServers = useStunBatch ? this.getCurrentStunBatch() : NETWORK_CONFIG.STUN_SERVERS;
+        NET_LOG('connectToPlayer', playerId, 'isHost=', this.isHost, 'stunCount=', stunServers.length);
 
         const pc = new RTCPeerConnection({
-            iceServers: NETWORK_CONFIG.STUN_SERVERS,
+            iceServers: stunServers,
         });
 
         this.connections.set(playerId, pc);
 
-        // 房主创建 DataChannel
         if (this.isHost) {
             const dc = pc.createDataChannel('game-input', {
                 ordered: false,
@@ -383,7 +575,6 @@ class NetworkManager {
         }
 
         pc.ondatachannel = (event) => {
-            // 非房主端接收 DataChannel
             NET_LOG('ondatachannel from', playerId);
             this.setupDataChannel(event.channel, playerId);
         };
@@ -399,6 +590,10 @@ class NetworkManager {
 
         pc.onconnectionstatechange = () => {
             NET_LOG('pc state', playerId, '=', pc.connectionState);
+            if (pc.connectionState === 'failed' && !this.reconnectingPlayers.has(playerId)) {
+                NET_WARN('Connection failed for player', playerId, ', attempting reconnect...');
+                this.reconnectPlayer(playerId);
+            }
         };
 
         if (this.isHost) {
@@ -414,13 +609,47 @@ class NetworkManager {
         return pc;
     }
 
+    async reconnectPlayer(playerId) {
+        if (this.reconnectingPlayers.has(playerId)) return;
+        this.reconnectingPlayers.add(playerId);
+
+        NET_LOG('Reconnecting to player', playerId);
+
+        const oldPc = this.connections.get(playerId);
+        if (oldPc) {
+            try { oldPc.close(); } catch (e) {}
+        }
+        this.connections.delete(playerId);
+        this.dataChannels.delete(playerId);
+        this.connectedPlayerIds.delete(playerId);
+        this.iceCandidateBuffer.delete(playerId);
+
+        this.rotateStunBatch();
+
+        setTimeout(async () => {
+            try {
+                const pc = await this.connectToPlayer(playerId, true);
+                if (pc && this.handshakeStarted && !this.handshakeCompleted) {
+                    this.startHandshakeForPlayer(playerId);
+                }
+            } catch (e) {
+                NET_WARN('Reconnect failed for player', playerId, e);
+            }
+            this.reconnectingPlayers.delete(playerId);
+        }, NETWORK_CONFIG.HANDSHAKE_RETRY_DELAY);
+    }
+
     setupDataChannel(dc, playerId) {
         dc.onopen = () => {
             NET_LOG('DataChannel OPEN with player', playerId, 'readyState=', dc.readyState);
             this.dataChannels.set(playerId, dc);
             this.connectedPlayerIds.add(playerId);
+            this.connectionStatus.set(playerId, 'connected');
             if (this.onPlayerJoin) {
                 this.onPlayerJoin(this.knownPlayers);
+            }
+            if (this.handshakeStarted && !this.handshakeCompleted) {
+                this.startHandshakeForPlayer(playerId);
             }
         };
 
@@ -445,7 +674,6 @@ class NetworkManager {
     }
 
     async handleSignal(fromId, data) {
-        // 通过信令服务器收到游戏开始信号（备用通道）
         if (data.type === 'gamestart') {
             NET_LOG('received gamestart via signaling from', fromId);
             this.startGameRemote(data.seed, data.playerCount);
@@ -454,7 +682,6 @@ class NetworkManager {
 
         let pc = this.connections.get(fromId);
         if (!pc && !this.isHost) {
-            // 非房主收到 offer 时被动创建连接
             pc = await this.connectToPlayer(fromId);
         }
         if (!pc) return;
@@ -462,21 +689,74 @@ class NetworkManager {
         try {
             if (data.type === 'offer') {
                 await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                await this.flushIceCandidates(fromId, pc);
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
                 this.sendSignal(fromId, { type: 'answer', answer });
             } else if (data.type === 'answer') {
                 await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                await this.flushIceCandidates(fromId, pc);
             } else if (data.type === 'ice') {
-                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                if (pc.remoteDescription) {
+                    await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                } else {
+                    NET_LOG('Buffering ICE candidate for', fromId, 'remoteDescription not set yet');
+                    if (!this.iceCandidateBuffer.has(fromId)) {
+                        this.iceCandidateBuffer.set(fromId, []);
+                    }
+                    this.iceCandidateBuffer.get(fromId).push(data.candidate);
+                }
             }
         } catch (e) {
             NET_WARN('Signal handling error:', e);
         }
     }
 
+    async flushIceCandidates(playerId, pc) {
+        const buffered = this.iceCandidateBuffer.get(playerId);
+        if (!buffered || buffered.length === 0) return;
+
+        NET_LOG('Flushing', buffered.length, 'buffered ICE candidates for', playerId);
+        for (const candidate of buffered) {
+            try {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (e) {
+                NET_WARN('Failed to add buffered ICE candidate for', playerId, e);
+            }
+        }
+        this.iceCandidateBuffer.delete(playerId);
+    }
+
     handleMessage(fromId, msg) {
+        if (msg.type === 'ping') {
+            this.pingTimestamps.set(fromId, Date.now());
+            this.connectionStatus.set(fromId, 'connected');
+            return;
+        }
+
+        if (msg.type === 'handshake_req') {
+            NET_LOG('Received handshake request from', fromId);
+            this.sendToPlayer(fromId, { type: 'handshake_ack', timestamp: Date.now() });
+            return;
+        }
+
+        if (msg.type === 'handshake_ack') {
+            NET_LOG('Received handshake ack from', fromId);
+            this.pingTimestamps.set(fromId, Date.now());
+            this.connectionStatus.set(fromId, 'connected');
+            this.checkHandshakeComplete();
+            return;
+        }
+
+        if (msg.type === 'handshake_complete') {
+            NET_LOG('Received handshake complete from', fromId);
+            this.checkHandshakeComplete();
+            return;
+        }
+
         if (msg.type === 'input' && this.frameSync) {
+            this.lastInputReceived.set(msg.playerId, Date.now());
+            this.connectionStatus.set(msg.playerId, 'connected');
             this.frameSync.receiveInput(msg.frame, msg.playerId, msg.input);
             if (this.onRemoteInput) {
                 this.onRemoteInput(msg.frame, msg.playerId, msg.input);
@@ -486,6 +766,127 @@ class NetworkManager {
             this.startGameRemote(msg.seed, msg.playerCount);
         } else {
             NET_WARN('unknown msg type', msg.type, 'from', fromId);
+        }
+    }
+
+    sendToPlayer(playerId, data) {
+        const dc = this.dataChannels.get(playerId);
+        if (!dc || dc.readyState !== 'open') return false;
+        try {
+            dc.send(JSON.stringify(data));
+            return true;
+        } catch (e) {
+            NET_WARN('sendToPlayer failed', playerId, e);
+            return false;
+        }
+    }
+
+    startHandshake() {
+        if (this.handshakeStarted) return;
+        this.handshakeStarted = true;
+        this.handshakeCompleted = false;
+        this.handshakeRetries = 0;
+
+        NET_LOG('Starting handshake, expected players:', this.maxPlayers - 1);
+
+        for (const player of this.knownPlayers) {
+            if (player.id === this.playerId) continue;
+            this.startHandshakeForPlayer(player.id);
+        }
+
+        this.startHandshakeTimer();
+    }
+
+    startHandshakeForPlayer(playerId) {
+        if (!this.dataChannels.has(playerId)) return;
+        if (this.connectionStatus.get(playerId) === 'handshaken') return;
+
+        NET_LOG('Sending handshake request to', playerId);
+        this.sendToPlayer(playerId, { type: 'handshake_req', timestamp: Date.now() });
+    }
+
+    startHandshakeTimer() {
+        if (this.handshakeTimer) clearTimeout(this.handshakeTimer);
+
+        this.handshakeTimer = setTimeout(() => {
+            if (this.handshakeCompleted) return;
+
+            this.handshakeRetries++;
+            NET_LOG('Handshake timeout, retry', this.handshakeRetries, '/', NETWORK_CONFIG.MAX_HANDSHAKE_RETRIES);
+
+            if (this.handshakeRetries >= NETWORK_CONFIG.MAX_HANDSHAKE_RETRIES) {
+                NET_WARN('Handshake failed after max retries');
+                if (this.onHandshakeFailed) {
+                    this.onHandshakeFailed('连接超时，正在尝试重新连接...');
+                }
+                this.rotateStunBatch();
+                for (const player of this.knownPlayers) {
+                    if (player.id === this.playerId) continue;
+                    if (this.connectionStatus.get(player.id) !== 'handshaken') {
+                        this.reconnectPlayer(player.id);
+                    }
+                }
+                this.handshakeRetries = 0;
+                this.startHandshakeTimer();
+                return;
+            }
+
+            for (const player of this.knownPlayers) {
+                if (player.id === this.playerId) continue;
+                if (this.connectionStatus.get(player.id) !== 'handshaken') {
+                    this.startHandshakeForPlayer(player.id);
+                }
+            }
+            this.startHandshakeTimer();
+        }, NETWORK_CONFIG.HANDSHAKE_TIMEOUT);
+    }
+
+    checkHandshakeComplete() {
+        if (this.handshakeCompleted) return;
+
+        let allReady = true;
+        let readyCount = 0;
+        const expected = this.maxPlayers - 1;
+
+        for (const player of this.knownPlayers) {
+            if (player.id === this.playerId) continue;
+            const lastPing = this.pingTimestamps.get(player.id) || 0;
+            const isConnected = this.connectedPlayerIds.has(player.id);
+            const hasRecentPing = Date.now() - lastPing < NETWORK_CONFIG.HANDSHAKE_TIMEOUT;
+
+            if (isConnected && hasRecentPing) {
+                this.connectionStatus.set(player.id, 'handshaken');
+                readyCount++;
+            } else {
+                allReady = false;
+            }
+        }
+
+        NET_LOG('Handshake check:', readyCount, '/', expected, 'ready');
+
+        if (allReady && readyCount >= expected) {
+            this.handshakeCompleted = true;
+            if (this.handshakeTimer) {
+                clearTimeout(this.handshakeTimer);
+                this.handshakeTimer = null;
+            }
+            NET_LOG('Handshake complete!');
+
+            this.sendToAll({ type: 'handshake_complete' });
+            this.finalizeGameStart();
+
+            if (this.onHandshakeComplete) {
+                this.onHandshakeComplete();
+            }
+        }
+    }
+
+    sendToAll(data) {
+        const msg = JSON.stringify(data);
+        for (const [id, dc] of this.dataChannels) {
+            if (dc.readyState === 'open') {
+                try { dc.send(msg); } catch (e) {}
+            }
         }
     }
 
@@ -534,23 +935,20 @@ class NetworkManager {
         const seed = Math.floor(Math.random() * 1000000);
         this.rng = new DeterministicRandom(seed);
         this.gameStarted = true;
-        this.frameSync = new FrameSync(null, this.maxPlayers, this.playerId);
-        this.frameSync.start();
+        this.pendingSeed = seed;
+        this.pendingPlayerCount = this.maxPlayers;
 
         NET_LOG('startHostGame seed=', seed, 'maxPlayers=', this.maxPlayers,
             'dataChannels=', this.dataChannels.size, 'connected=', [...this.connectedPlayerIds]);
 
-        // 通过 DataChannel 广播 gamestart
         this.broadcastGameStart(seed, this.maxPlayers);
 
-        // 备用：通过信令服务器发送 gamestart（针对 DataChannel 未建立的玩家）
         if (this.signalingUrl && this.roomCode) {
             for (const player of this.knownPlayers) {
                 if (player.id !== this.playerId) {
                     this.sendSignal(player.id, { type: 'gamestart', seed, playerCount: this.maxPlayers }).catch(() => {});
                 }
             }
-            // 也通知服务器记录状态
             try {
                 await fetch(`${this.signalingUrl}/api/room/${this.roomCode}/start`, {
                     method: 'POST',
@@ -566,6 +964,8 @@ class NetworkManager {
             }
         }
 
+        this.startHandshake();
+
         return { seed, playerCount: this.maxPlayers };
     }
 
@@ -577,11 +977,30 @@ class NetworkManager {
         NET_LOG('startGameRemote seed=', seed, 'playerCount=', playerCount);
         this.rng = new DeterministicRandom(seed);
         this.gameStarted = true;
-        this.frameSync = new FrameSync(null, playerCount, this.playerId);
-        this.frameSync.start();
+        this.pendingSeed = seed;
+        this.pendingPlayerCount = playerCount;
+
+        this.startHandshake();
 
         if (this.onGameStart) {
             this.onGameStart(seed, playerCount);
+        }
+    }
+
+    finalizeGameStart() {
+        if (this.frameSync) return;
+
+        const seed = this.pendingSeed;
+        const playerCount = this.pendingPlayerCount;
+
+        NET_LOG('finalizeGameStart seed=', seed, 'playerCount=', playerCount);
+
+        this.frameSync = new FrameSync(null, playerCount, this.playerId);
+        this.frameSync.start();
+        this.startPing();
+
+        if (this.onGameFinalStart) {
+            this.onGameFinalStart(seed, playerCount);
         }
     }
 

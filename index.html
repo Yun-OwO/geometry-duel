@@ -77,13 +77,10 @@
                         </button>
                         <button class="count-btn game-mode-btn" data-mode="endless">
                             <span class="count-num">无尽</span>
-                            <span class="count-sub">AI进化</span>
+                            <span class="count-sub">连续挑战</span>
                         </button>
                     </div>
                 </div>
-                <button class="secondary-btn" id="reset-ai-genes-btn">
-                    重置AI基因
-                </button>
                 <button class="primary-btn" id="start-ai-btn">
                     开始游戏
                 </button>
@@ -163,47 +160,8 @@
             </div>
         </div>
 
-        <div id="talent-tree-screen" class="overlay hidden">
-            <div class="talent-tree-container">
-                <div class="talent-tree-header">
-                    <button class="back-btn" id="talent-tree-back">←</button>
-                    <h2 class="talent-tree-title">AI基因谱</h2>
-                    <div class="talent-tree-tabs">
-                        <button class="talent-tab active" data-branch="attack">攻击</button>
-                        <button class="talent-tab" data-branch="movement">移动</button>
-                        <button class="talent-tab" data-branch="defense">防御</button>
-                        <button class="talent-tab" data-branch="ultimate">大招</button>
-                        <button class="talent-tab" data-branch="special">特殊</button>
-                    </div>
-                </div>
-                <div id="talent-tree-chart"></div>
-                <div id="talent-tooltip" class="talent-tooltip hidden">
-                    <div class="tooltip-title"></div>
-                    <div class="tooltip-stage"></div>
-                    <div class="tooltip-status"></div>
-                    <div class="tooltip-desc"></div>
-                    <div class="tooltip-prereq"></div>
-                </div>
-                <div id="gene-detail-panel" class="gene-detail-panel hidden">
-                    <div class="gene-detail-header">
-                        <div class="gene-detail-name"></div>
-                        <button class="gene-detail-close" id="gene-detail-close">×</button>
-                    </div>
-                    <div class="gene-detail-branch"></div>
-                    <div class="gene-detail-stage"></div>
-                    <div class="gene-detail-status"></div>
-                    <div class="gene-detail-desc"></div>
-                    <div class="gene-detail-effect-title">基因效果</div>
-                    <div class="gene-detail-effect"></div>
-                    <div class="gene-detail-prereq"></div>
-                </div>
-            </div>
-        </div>
-
-        <script src="js/echarts.min.js" defer></script>
         <script src="js/howler.min.js" defer></script>
         <script src="js/config.js" defer></script>
-        <script src="js/ai-talent-tree.js" defer></script>
         <script src="js/network.js" defer></script>
         <script src="js/ui.js" defer></script>
         <script src="js/game.js" defer></script>

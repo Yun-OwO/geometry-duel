@@ -71,12 +71,6 @@ class UI {
             this.startAIGame();
         });
 
-        document.getElementById('reset-ai-genes-btn').addEventListener('click', () => {
-            this.playUISound();
-            this.vibrate(10);
-            this.game.resetAIGenes();
-        });
-
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.playUISound();
@@ -146,10 +140,26 @@ class UI {
             this.game.gameMode = 'online';
             this.game.onlinePlayerCount = playerCount;
             this.game.initEntities(playerCount);
-            Network.frameSync.game = this.game;
             this.game.demoMode = false;
-            this.game.state = GameState.PLAYING;
             this.game.resetGame();
+            this.game.connectingMessage = '正在连接对手...';
+            this.game.state = GameState.CONNECTING;
+        };
+
+        Network.onGameFinalStart = (seed, playerCount) => {
+            Network.frameSync.game = this.game;
+            if (!this.game.rng) {
+                this.game.rng = new DeterministicRandom(seed);
+            }
+            this.game.state = GameState.PLAYING;
+        };
+
+        Network.onNetworkStatus = (status) => {
+            this.game.networkStatus = status;
+        };
+
+        Network.onHandshakeFailed = (message) => {
+            this.game.connectingMessage = message;
         };
     }
 
