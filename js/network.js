@@ -4,104 +4,23 @@ const NETWORK_CONFIG = {
         { urls: 'stun:stun.aliyun.com:3478' },
         { urls: 'stun:stun.qq.com:3478' },
         { urls: 'stun:stun.cloudflare.com:3478' },
-        { urls: 'stun:stun.healthtap.com:3478' },
-        { urls: 'stun:stun.business-isp.nl:3478' },
-        { urls: 'stun:stun.framasoft.org:3478' },
-        { urls: 'stun:stun.nextcloud.com:443' },
-        { urls: 'stun:stun.telviva.com:3478' },
-        { urls: 'stun:stun.lebendigefluesse.at:3478' },
-        { urls: 'stun:stun.siptrunk.com:3478' },
-        { urls: 'stun:stun.uabrides.com:3478' },
-        { urls: 'stun:stun.ipfire.org:3478' },
-        { urls: 'stun:stun.ru-brides.com:3478' },
-        { urls: 'stun:stun.genymotion.com:3478' },
-        { urls: 'stun:stun.files.fm:3478' },
-        { urls: 'stun:stun.pure-ip.com:3478' },
-        { urls: 'stun:stun.moonlight-stream.org:3478' },
-        { urls: 'stun:stun.hot-chilli.net:3478' },
-        { urls: 'stun:stun.romancecompass.com:3478' },
         { urls: 'stun:stun.nextcloud.com:3478' },
-        { urls: 'stun:stun.voipia.net:3478' },
-        { urls: 'stun:stun.zentauron.de:3478' },
-        { urls: 'stun:stun.ttmath.org:3478' },
-        { urls: 'stun:stun.sipnet.com:3478' },
-        { urls: 'stun:stun.voipgate.com:3478' },
-        { urls: 'stun:stun.frozenmountain.com:3478' },
-        { urls: 'stun:stun.sonetel.net:3478' },
-        { urls: 'stun:stun.meetwife.com:3478' },
-        { urls: 'stun:stun.finsterwalder.com:3478' },
-        { urls: 'stun:stun.linuxtrent.it:3478' },
-        { urls: 'stun:stun.cope.es:3478' },
-        { urls: 'stun:stun.baltmannsweiler.de:3478' },
-        { urls: 'stun:stun.fmo.de:3478' },
-        { urls: 'stun:stun.bcs2005.net:3478' },
-        { urls: 'stun:stun.voip.blackberry.com:3478' },
-        { urls: 'stun:stun.vavadating.com:3478' },
-        { urls: 'stun:stun.tel2.co.uk:3478' },
-        { urls: 'stun:stun.diallog.com:3478' },
-        { urls: 'stun:stun.f.haeder.net:3478' },
-        { urls: 'stun:stun.vomessen.de:3478' },
-        { urls: 'stun:stun.godatenow.com:3478' },
-        { urls: 'stun:stun.lovense.com:3478' },
-        { urls: 'stun:stun.fitauto.ru:3478' },
-        { urls: 'stun:stun.poetamatusel.org:3478' },
-        { urls: 'stun:stun.bridesbay.com:3478' },
-        { urls: 'stun:stun.ringostat.com:3478' },
-        { urls: 'stun:stun.nanocosmos.de:3478' },
-        { urls: 'stun:stun.schulinformatik.at:3478' },
-        { urls: 'stun:stun.telnyx.com:3478' },
-        { urls: 'stun:stun.annatel.net:3478' },
-        { urls: 'stun:stun.ncic.com:3478' },
-        { urls: 'stun:stun.axialys.net:3478' },
-        { urls: 'stun:stun.stochastix.de:3478' },
-        { urls: 'stun:stun.skydrone.aero:3478' },
-        { urls: 'stun:stun.engineeredarts.co.uk:3478' },
-        { urls: 'stun:stun.grazertrinkwasseringefahr.at:3478' },
-        { urls: 'stun:stun.flashdance.cx:3478' },
-        { urls: 'stun:stun.graftlab.com:3478' },
-        { urls: 'stun:stun.eol.co.nz:3478' },
-        { urls: 'stun:stun.siplogin.de:3478' },
-        { urls: 'stun:stun.m-online.net:3478' },
-        { urls: 'stun:stun.yesdates.com:3478' },
-        { urls: 'stun:stun.kaseya.com:3478' },
-        { urls: 'stun:stun.romaaeterna.nl:3478' },
-        { urls: 'stun:stun.technosens.fr:3478' },
-        { urls: 'stun:stun.signalwire.com:3478' },
-        { urls: 'stun:stun.alpirsbacher.de:3478' },
-        { urls: 'stun:stun.radiojar.com:3478' },
-        { urls: 'stun:stun.geesthacht.de:3478' },
-        { urls: 'stun:stun.ukh.de:3478' },
-        { urls: 'stun:stun.dcalling.de:3478' },
+        { urls: 'stun:stun.google.com:19302' },
+        { urls: 'stun:stun.moonlight-stream.org:3478' },
         { urls: 'stun:stun.freeswitch.org:3478' },
-        { urls: 'stun:stun.cellmail.com:3478' },
-        { urls: 'stun:stun.tula.nu:3478' },
-        { urls: 'stun:stun.sonetel.com:3478' },
-        { urls: 'stun:stun.dus.net:3478' },
-        { urls: 'stun:stun.peethultra.be:3478' },
-        { urls: 'stun:stun.sip.us:3478' },
-        { urls: 'stun:stun.thinkrosystem.com:3478' },
-        { urls: 'stun:stun.threema.ch:3478' },
-        { urls: 'stun:stun.bitburger.de:3478' },
-        { urls: 'stun:stun.bethesda.net:3478' },
-        { urls: 'stun:stun.kanojo.de:3478' },
-        { urls: 'stun:stun.galeriemagnet.at:3478' },
-        { urls: 'stun:stun.mixvoip.com:3478' },
-        { urls: 'stun:stun.acronis.com:3478' },
-        { urls: 'stun:stun.atagverwarming.nl:3478' },
-        { urls: 'stun:stun.sipthor.net:3478' },
-        { urls: 'stun:stun.verbo.be:3478' },
-        { urls: 'stun:stun.oncloud7.ch:3478' },
+        { urls: 'stun:stun.telnyx.com:3478' },
     ],
     INPUT_BUFFER_SIZE: 3,
     FRAME_DELAY: 3,
     POLL_INTERVAL: 500,
-    PING_INTERVAL: 1000,
-    PING_TIMEOUT: 1000,
-    INPUT_TIMEOUT: 1000,
-    HANDSHAKE_TIMEOUT: 1000,
-    HANDSHAKE_RETRY_DELAY: 100,
-    MAX_HANDSHAKE_RETRIES: 1,
-    STUN_BATCH_SIZE: 5,
+    PING_INTERVAL: 2000,
+    PING_TIMEOUT: 5000,
+    INPUT_TIMEOUT: 3000,
+    HANDSHAKE_TIMEOUT: 10000,
+    HANDSHAKE_RETRY_DELAY: 2000,
+    MAX_HANDSHAKE_RETRIES: 5,
+    STUN_BATCH_SIZE: 4,
+    FRAME_STALL_TIMEOUT: 2000,
 };
 
 const NET_LOG = (...args) => console.log('%c[NET]', 'color:#0a0;font-weight:bold', ...args);
@@ -149,6 +68,8 @@ class FrameSync {
         this.remoteFrames = new Map();
         this.running = false;
         this.stallCount = 0;
+        this.lastRemoteInput = new Map();
+        this.frameStallStart = 0;
     }
 
     start() {
@@ -158,6 +79,8 @@ class FrameSync {
         this.inputs.clear();
         this.remoteFrames.clear();
         this.stallCount = 0;
+        this.lastRemoteInput.clear();
+        this.frameStallStart = 0;
         FS_LOG('start playerCount=', this.playerCount, 'localId=', this.localPlayerId, 'delay=', NETWORK_CONFIG.FRAME_DELAY);
     }
 
@@ -174,7 +97,6 @@ class FrameSync {
     }
 
     sendInput(frame, input) {
-        // 通过 WebRTC DataChannel 广播给所有已连接的对端
         Network.broadcastInput(frame, this.localPlayerId, this.serializeInput(input));
     }
 
@@ -197,14 +119,15 @@ class FrameSync {
     }
 
     receiveInput(frame, playerId, inputData) {
+        const deserialized = this.deserializeInput(inputData);
         if (!this.remoteFrames.has(frame)) {
             this.remoteFrames.set(frame, new Map());
         }
-        this.remoteFrames.get(frame).set(playerId, this.deserializeInput(inputData));
+        this.remoteFrames.get(frame).set(playerId, deserialized);
+        this.lastRemoteInput.set(playerId, deserialized);
     }
 
     canAdvance() {
-        // 缓冲未预热到 FRAME_DELAY 之前不模拟
         if (this.inputsCollected <= this.frame + NETWORK_CONFIG.FRAME_DELAY) return false;
 
         const targetFrame = this.frame;
@@ -216,15 +139,43 @@ class FrameSync {
         const frameInputs = this.remoteFrames.get(targetFrame);
         if (!frameInputs || frameInputs.size < expectedRemotes) {
             this.stallCount++;
-            // 每60次停滞输出一次诊断，避免日志爆炸
+
+            if (this.frameStallStart === 0) {
+                this.frameStallStart = Date.now();
+            }
+
+            const stallDuration = Date.now() - this.frameStallStart;
+            if (stallDuration > NETWORK_CONFIG.FRAME_STALL_TIMEOUT) {
+                const missing = [];
+                for (const player of Network.knownPlayers) {
+                    if (player.id === this.localPlayerId) continue;
+                    if (!frameInputs || !frameInputs.has(player.id)) {
+                        missing.push(player.id);
+                    }
+                }
+                FS_LOG(`STALL TIMEOUT frame=${targetFrame} stalled ${stallDuration}ms, using fallback for players:`, missing);
+
+                if (!frameInputs) {
+                    frameInputs = new Map();
+                    this.remoteFrames.set(targetFrame, frameInputs);
+                }
+                for (const pid of missing) {
+                    const fallback = this.lastRemoteInput.get(pid) || { moveX: 0, moveY: 0, zPressed: false, xPressed: false };
+                    frameInputs.set(pid, fallback);
+                }
+                this.stallCount = 0;
+                this.frameStallStart = 0;
+                return true;
+            }
+
             if (this.stallCount % 60 === 1) {
                 const got = frameInputs ? frameInputs.size : 0;
-                FS_LOG(`stall frame=${targetFrame} expected=${expectedRemotes} got=${got} inputsCollected=${this.inputsCollected}`);
-                console.log(`[CANADVANCE] frame=${this.frame} inputsCollected=${this.inputsCollected} remoteFrames.has(${this.frame})=${this.remoteFrames.has(this.frame)} remoteSize=${this.remoteFrames.get(this.frame)?.size ?? 0} expectedRemotes=${this.playerCount - 1}`);
+                FS_LOG(`stall frame=${targetFrame} expected=${expectedRemotes} got=${got} inputsCollected=${this.inputsCollected} stallMs=${stallDuration}`);
             }
             return false;
         }
         this.stallCount = 0;
+        this.frameStallStart = 0;
         return true;
     }
 
@@ -240,6 +191,7 @@ class FrameSync {
 
     advanceFrame() {
         this.frame++;
+        this.frameStallStart = 0;
         if (this.frame > 10000) {
             this.cleanupOldFrames();
         }
@@ -280,6 +232,7 @@ class NetworkManager {
         this.signalQueue = [];
         this.knownPlayers = [];
         this.gameStarted = false;
+        this.gameStartReceived = false;
         this.handshakeStarted = false;
         this.handshakeCompleted = false;
         this.handshakeRetries = 0;
@@ -290,6 +243,12 @@ class NetworkManager {
         this.iceCandidateBuffer = new Map();
         this.currentStunStartIndex = 0;
         this.reconnectingPlayers = new Set();
+        // Per-target promise chain that serializes all sendSignal POSTs.
+        // This is critical: without it, an 'offer' POST and an 'ice' POST can be
+        // in flight simultaneously, and the server's read-modify-write on the
+        // signals array loses whichever write lands first. By chaining, the
+        // offer POST fully completes on the server before the ice POST starts.
+        this._signalQueue = new Map();
     }
 
     get signalingUrl() {
@@ -374,10 +333,14 @@ class NetworkManager {
         this.isHost = false;
         this.knownPlayers = [];
         this.gameStarted = false;
+        this.gameStartReceived = false;
+        this.handshakeStarted = false;
+        this.handshakeCompleted = false;
         this.pingTimestamps.clear();
         this.lastInputReceived.clear();
         this.connectionStatus.clear();
         this.iceCandidateBuffer.clear();
+        this._signalQueue.clear();
     }
 
     generateRoomCode() {
@@ -489,7 +452,13 @@ class NetworkManager {
      */
     async pollSignals() {
         if (!this.signalingUrl || !this.roomCode) return;
-
+        // Prevent overlapping polls: setInterval can fire the next poll before
+        // the previous async pollSignals resolves (especially when handleSignal
+        // awaits setRemoteDescription / sendSignal). Overlapping polls would
+        // re-fetch and re-process the same signals, causing duplicate offer
+        // processing and ICE candidate races.
+        if (this._polling) return;
+        this._polling = true;
         try {
             const res = await fetch(
                 `${this.signalingUrl}/api/room/${this.roomCode}/poll?playerId=${this.playerId}&since=${this.pollSince}`
@@ -511,7 +480,7 @@ class NetworkManager {
                     for (const p of this.knownPlayers) {
                         if (p.id !== this.playerId && !this.connections.has(p.id)) {
                             NET_LOG('host initiating connection to player', p.id);
-                            this.connectToPlayer(p.id).catch((e) => {NET_WARN('connectToPlayer failed', p.id, e);prompt('err:', e);});
+                            this.connectToPlayer(p.id).catch((e) => { NET_WARN('connectToPlayer failed', p.id, e); });
                         }
                     }
                 }
@@ -522,32 +491,60 @@ class NetworkManager {
             }
 
             if (data.signals && data.signals.length > 0) {
+                const mine = data.signals.filter(s => s.toId === this.playerId);
+                if (mine.length > 0) {
+                    NET_LOG('poll got', mine.length, 'signals:', mine.map(s => s.data.type).join(','));
+                }
+                // AWAIT each handleSignal so signals in the same poll batch are
+                // processed sequentially. Without this, an 'ice' signal can be
+                // processed concurrently with an 'offer'/'answer' signal, racing
+                // on pc.remoteDescription and buffering candidates that never get
+                // flushed.
                 for (const sig of data.signals) {
                     if (sig.toId === this.playerId) {
-                        this.handleSignal(sig.fromId, sig.data);
+                        await this.handleSignal(sig.fromId, sig.data);
                     }
                 }
             }
         } catch (e) {
             NET_WARN('Poll error:', e);
+        } finally {
+            this._polling = false;
         }
     }
 
     async sendSignal(targetId, data) {
         if (!this.signalingUrl) return;
-        try {
-            await fetch(`${this.signalingUrl}/api/room/${this.roomCode}/signal`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    fromId: this.playerId,
-                    toId: targetId,
-                    data,
-                }),
-            });
-        } catch (e) {
-            NET_WARN('Send signal error:', e);
-        }
+        // Chain this POST after any in-flight signal POST to the same target.
+        // The server's sendSignal handler does a non-atomic read-modify-write
+        // on room.signals (KV get -> push -> put). If two POSTs overlap, the
+        // later write wins and the earlier signal is LOST. Losing an offer or
+        // answer is fatal (the peer can never set remoteDescription). By
+        // serializing per-target, we guarantee each write lands before the next
+        // read, so no signal is ever dropped due to the race.
+        const prev = this._signalQueue.get(targetId) || Promise.resolve();
+        const task = prev.then(async () => {
+            try {
+                const res = await fetch(`${this.signalingUrl}/api/room/${this.roomCode}/signal`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fromId: this.playerId,
+                        toId: targetId,
+                        data,
+                    }),
+                });
+                if (!res.ok) {
+                    NET_WARN('sendSignal not ok:', res.status, 'type=', data.type);
+                }
+            } catch (e) {
+                NET_WARN('Send signal error:', e);
+            }
+        });
+        // Catch on the stored promise so a rejection doesn't break the chain.
+        task.catch(() => {});
+        this._signalQueue.set(targetId, task);
+        return task;
     }
 
     /**
@@ -568,14 +565,13 @@ class NetworkManager {
 
         if (this.isHost) {
             const dc = pc.createDataChannel('game-input', {
-                ordered: false,
-                maxRetransmits: 0,
+                ordered: true,
             });
             this.setupDataChannel(dc, playerId);
         }
 
         pc.ondatachannel = (event) => {
-            NET_LOG('ondatachannel from', playerId);
+            NET_LOG('ondatachannel from', playerId, 'label=', event.channel.label);
             this.setupDataChannel(event.channel, playerId);
         };
 
@@ -585,7 +581,17 @@ class NetworkManager {
                     type: 'ice',
                     candidate: e.candidate,
                 });
+            } else {
+                NET_LOG('ICE gathering complete for', playerId);
             }
+        };
+
+        pc.oniceconnectionstatechange = () => {
+            NET_LOG('ICE state', playerId, '=', pc.iceConnectionState);
+        };
+
+        pc.onicegatheringstatechange = () => {
+            NET_LOG('ICE gathering state', playerId, '=', pc.iceGatheringState);
         };
 
         pc.onconnectionstatechange = () => {
@@ -600,7 +606,11 @@ class NetworkManager {
             try {
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
-                this.sendSignal(playerId, { type: 'offer', offer });
+                // AWAIT: ensure the offer is persisted on the signaling server BEFORE
+                // any ICE candidate POSTs fire (onicecandidate triggers after setLocalDescription).
+                // Without this, concurrent sendSignal POSTs race on the server's
+                // read-modify-write and the offer can be lost.
+                await this.sendSignal(playerId, { type: 'offer', offer });
             } catch (e) {
                 NET_WARN('createOffer failed', e);
             }
@@ -623,6 +633,7 @@ class NetworkManager {
         this.dataChannels.delete(playerId);
         this.connectedPlayerIds.delete(playerId);
         this.iceCandidateBuffer.delete(playerId);
+        this._signalQueue.delete(playerId);
 
         this.rotateStunBatch();
 
@@ -686,15 +697,24 @@ class NetworkManager {
         }
         if (!pc) return;
 
+        NET_LOG('handleSignal from', fromId, 'type=', data.type, 'hasRemoteDesc=', !!pc.remoteDescription);
+
         try {
             if (data.type === 'offer') {
                 await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                NET_LOG('offer: setRemoteDescription OK, hasRemoteDesc=', !!pc.remoteDescription);
                 await this.flushIceCandidates(fromId, pc);
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
-                this.sendSignal(fromId, { type: 'answer', answer });
+                // AWAIT: ensure the answer is persisted on the signaling server BEFORE
+                // any ICE candidate POSTs fire. Without this, concurrent sendSignal POSTs
+                // race on the server's read-modify-write and the answer can be lost,
+                // leaving the offerer stuck with no remoteDescription forever.
+                await this.sendSignal(fromId, { type: 'answer', answer });
+                NET_LOG('offer: answer sent OK');
             } else if (data.type === 'answer') {
                 await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                NET_LOG('answer: setRemoteDescription OK');
                 await this.flushIceCandidates(fromId, pc);
             } else if (data.type === 'ice') {
                 if (pc.remoteDescription) {
@@ -708,7 +728,7 @@ class NetworkManager {
                 }
             }
         } catch (e) {
-            NET_WARN('Signal handling error:', e);
+            NET_WARN('Signal handling error:', e && (e.message || e));
         }
     }
 
@@ -970,10 +990,11 @@ class NetworkManager {
     }
 
     startGameRemote(seed, playerCount) {
-        if (this.frameSync) {
-            NET_WARN('startGameRemote called but frameSync already exists, ignoring');
+        if (this.gameStartReceived) {
+            NET_LOG('startGameRemote already received, ignoring duplicate');
             return;
         }
+        this.gameStartReceived = true;
         NET_LOG('startGameRemote seed=', seed, 'playerCount=', playerCount);
         this.rng = new DeterministicRandom(seed);
         this.gameStarted = true;
